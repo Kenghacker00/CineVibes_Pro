@@ -20,7 +20,6 @@ from math import ceil
 from datetime import timedelta
 from flask_caching import Cache
 from utils.db_adapter import connect, using_postgres
-from utils.supabase_storage import is_enabled as storage_enabled, upload_bytes as storage_upload, delete_object as storage_delete, public_url as storage_public_url
 try:
     from flask_compress import Compress
 except ImportError:
@@ -257,44 +256,27 @@ def profile():
             flash('El archivo no es una imagen válida.', 'error')
             return redirect(url_for('profile'))
 
-        # --- Borra la foto anterior (opcional) ---
-        old_ref = (user.get('profile_pic') or '').replace('\\', '/')
-        # Si usamos Supabase, old_ref será una URL pública; si es local, es ruta relativa 'uploads/profile_pics/...'
-        # Intentamos limpiar según el backend
-        try:
-            if storage_enabled() and old_ref and old_ref.startswith(storage_public_url('')):
-                # extrae ruta relativa dentro del bucket
-                base = storage_public_url('')
-                rel = old_ref[len(base):].lstrip('/')
-                storage_delete(rel)
-            elif old_ref:
-                static_dir = os.path.join(app.root_path, 'static')
-                upload_dir = os.path.abspath(os.path.join(static_dir, 'uploads', 'profile_pics'))
-                candidate = os.path.abspath(os.path.join(static_dir, old_ref))
-                if candidate.startswith(upload_dir) and os.path.isfile(candidate):
+        # --- Borra la foto anterior (opcional, solo local) ---
+        old_rel = (user.get('profile_pic') or '').replace('\\', '/')
+        # si era una URL absoluta (http), no intentamos borrar local
+        if old_rel and not old_rel.startswith('http'):
+            static_dir = os.path.join(app.root_path, 'static')
+            upload_dir = os.path.abspath(os.path.join(static_dir, 'uploads', 'profile_pics'))
+            candidate = os.path.abspath(os.path.join(static_dir, old_rel))
+            if candidate.startswith(upload_dir) and os.path.isfile(candidate):
+                try:
                     os.remove(candidate)
-        except Exception:
-            pass
+                except Exception:
+                    pass
 
-        # --- Genera nombre único ---
+        # --- Genera nombre único (local) ---
         unique_name = f"user_{session['user_id']}_{int(time.time())}_{uuid.uuid4().hex[:8]}.{ext}"
-
-        # Subir a Supabase Storage si está configurado; si no, a disco local
-        if storage_enabled():
-            # RUTA dentro del bucket: profile_pics/<unique>
-            object_path = f"profile_pics/{secure_filename(unique_name)}"
-            # Leer bytes del file stream
-            data = file.read()
-            # Inferir content-type
-            content_type = file.mimetype or 'image/jpeg'
-            url = storage_upload(object_path, data, content_type)
-            relative_path = url  # guardamos URL pública directa
-        else:
-            upload_folder = os.path.join(app.root_path, app.config['UPLOAD_FOLDER'], 'profile_pics')
-            os.makedirs(upload_folder, exist_ok=True)
-            abs_path = os.path.join(upload_folder, secure_filename(unique_name))
-            file.save(abs_path)
-            relative_path = str(PurePosixPath('uploads', 'profile_pics', unique_name))
+        upload_folder = os.path.join(app.root_path, app.config['UPLOAD_FOLDER'], 'profile_pics')
+        os.makedirs(upload_folder, exist_ok=True)
+        abs_path = os.path.join(upload_folder, secure_filename(unique_name))
+        file.save(abs_path)
+        # Ruta RELATIVA para BD (POSIX slashes): 'uploads/profile_pics/...'
+        relative_path = str(PurePosixPath('uploads', 'profile_pics', unique_name))
 
         # Actualiza en BD
         auth_controller.update_profile_pic(session['user_id'], relative_path)
@@ -302,7 +284,7 @@ def profile():
         # 💥 invalida caché del usuario para que no vuelva el perfil viejo
         cache.delete_memoized(load_user_profile_cached, session['user_id'])
 
-    # 🧠 actualiza el user actual en memoria para esta misma request
+        # 🧠 actualiza el user actual en memoria para esta misma request
         try:
             if isinstance(g.user, dict):
                 g.user['profile_pic'] = relative_path
