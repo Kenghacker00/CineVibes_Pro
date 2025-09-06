@@ -8,7 +8,7 @@
     <div class="col-md-4">
       <div class="profile-card glass-effect p-4 rounded">
         <div class="profile-header text-center">
-          <img loading="lazy" src="{{ url_for('static', filename=user.profile_pic) if user.profile_pic else url_for('static', filename='images/default_profile.png') }}"
+          <img loading="lazy" src="{{ user.profile_pic if user.profile_pic and user.profile_pic.startswith('http') else (url_for('static', filename=user.profile_pic) if user.profile_pic else url_for('static', filename='images/default_profile.png')) }}"
                alt="Foto de perfil"
                class="profile-image animate__animated animate__fadeIn">
           <div class="profile-status">

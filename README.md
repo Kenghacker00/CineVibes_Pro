@@ -50,6 +50,11 @@ Se realizaron pruebas exhaustivas para garantizar el correcto funcionamiento de 
 
 ### Despliegue
 La aplicación se puede desplegar en un servidor utilizando un entorno de producción adecuado. Se han establecido prácticas para el mantenimiento y la actualización de la aplicación.
+
+Variables necesarias para Storage (opcional):
+- SUPABASE_URL
+- SUPABASE_SERVICE_KEY (o SUPABASE_KEY / SUPABASE_ANON_KEY si el bucket es público y permite escritura con esa clave)
+- SUPABASE_BUCKET (por defecto: profile-pics)
 ##
 ### Controllers
 El código implementa varios controladores para gestionar diferentes aspectos de una aplicación web. **AuthController** se encarga del registro y la gestión de usuarios, utilizando la biblioteca `sqlite3` para almacenar información de manera eficiente. Al registrar un nuevo usuario, genera un código de verificación único y lo envía por correo electrónico, asegurando que el usuario tenga acceso a su cuenta. Además, permite la verificación del código, actualizando el estado del usuario a verificado y ofreciendo funcionalidades para gestionar su perfil, como la actualización de datos personales y contraseñas.

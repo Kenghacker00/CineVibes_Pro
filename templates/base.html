@@ -253,7 +253,7 @@
                         </li>
                         <li class="nav-item">
                             <div class="d-flex justify-content-center">
-                                <img loading="lazy" src="{{ url_for('static', filename=user.profile_pic) if user.profile_pic else url_for('static', filename='images/default_profile.png') }}"
+                                <img loading="lazy" src="{{ user.profile_pic if user.profile_pic and user.profile_pic.startswith('http') else (url_for('static', filename=user.profile_pic) if user.profile_pic else url_for('static', filename='images/default_profile.png')) }}"
                                      alt="Foto de Perfil"
                                      class="profile-img">
                             </div>
