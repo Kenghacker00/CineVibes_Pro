@@ -1,0 +1,319 @@
+{% extends "base.html" %}
+
+{% block title %}CineVibes - Buscar Películas{% endblock %}
+
+{% block content %}
+<div class="container-fluid animate__animated animate__fadeIn py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <h2 class="text-light text-center mb-4">Buscar Películas</h2>
+            <div class="search-container mb-5">
+                <div class="input-group">
+                    <input type="text" id="search-input" class="form-control form-control-lg bg-transparent text-light" placeholder="Buscar películas..." autocomplete="off">
+                    <div class="input-group-append">
+                        <button class="btn btn-danger led-effect" type="button" id="search-button">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </div>
+                <div id="search-results" class="search-results mt-2"></div>
+            </div>
+        </div>
+    </div>
+
+    <h3 class="text-light text-center mb-4">Recomendaciones</h3>
+    <div class="row" id="recommendations">
+        {% for movie in recommendations %}
+        <div class="col-sm-6 col-md-4 col-lg-3 mb-4">
+            <div class="movie-card h-100">
+                <div class="movie-poster-container">
+                    <img loading="lazy" src="{{ movie.poster }}" class="card-img-top movie-poster" alt="{{ movie.title }}">
+                    <div class="movie-overlay">
+                        <a href="{{ url_for('movie_player', movie_id=movie.imdb_id) }}" class="btn btn-danger led-effect">Ver Película</a>
+                    </div>
+                </div>
+                <div class="card-body text-center d-flex flex-column justify-content-between">
+                    <h5 class="card-title text-light">{{ movie.title }}</h5>
+                    <p class="card-text text-light">{{ movie.year }}</p>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+        
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const searchInput = document.getElementById('search-input');
+const searchButton = document.getElementById('search-button');
+const searchResults = document.getElementById('search-results');
+
+let timeoutId;
+
+function performSearch() {
+    const query = searchInput.value.trim();
+    if (query.length > 2) {
+        fetchSearchResults(query);
+    } else {
+        searchResults.innerHTML = '';
+        searchResults.style.display = 'none';
+    }
+}
+
+searchInput.addEventListener('input', function() {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(performSearch, 300);
+});
+
+searchButton.addEventListener('click', performSearch);
+
+searchInput.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        performSearch();
+    }
+});
+
+function fetchSearchResults(query) {
+    fetch(`/search?q=${encodeURIComponent(query)}`, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        displaySearchResults(data);
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+}
+
+function displaySearchResults(movies) {
+    searchResults.innerHTML = '';
+    if (movies.length > 0) {
+        movies.forEach(movie => {
+            const div = document.createElement('div');
+            div.className = 'search-result';
+            div.innerHTML = `
+                <img loading="lazy" src="${movie.Poster !== 'N/A' ? movie.Poster : '/static/images/no-poster.jpg'}" alt="${movie.Title}" class="search-result-poster">
+                <div class="search-result-info">
+                    <h4>${movie.Title}</h4>
+                    <p>${movie.Year}</p>
+                </div>
+            `;
+            div.addEventListener('click', () => {
+                window.location.href = `/movie/${movie.imdbID}`;
+            });
+            searchResults.appendChild(div);
+        });
+        searchResults.style.display = 'block';
+    } else {
+        searchResults.innerHTML = '<div class="no-results">No se encontraron resultados</div>';
+        searchResults.style.display = 'block';
+    }
+}
+
+document.addEventListener('click', function(event) {
+    if (!searchResults.contains(event.target) && event.target !== searchInput) {
+        searchResults.style.display = 'none';
+    }
+});
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+body {
+    background-color: #121212;
+}
+
+.movie-card {
+    background: rgba(255, 0, 0, 0.1);
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 4px 10px rgba(255, 0, 0, 0.2);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.movie-card:hover {
+    transform: translateY(-5px);
+    border: 2px solid #ff0000;
+    box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
+}
+
+.movie-poster-container {
+    position: relative;
+    overflow: hidden;
+}
+
+.movie-poster {
+    width: 100%;
+    height: 400px;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.movie-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.movie-card:hover .movie-overlay {
+    opacity: 1;
+}
+
+.movie-card:hover .movie-poster {
+    transform: scale(1.05);
+}
+
+.card-body {
+    background-color: rgba(0, 0, 0, 0.7);
+    padding: 15px;
+}
+
+.btn-danger {
+    background-color: #ff0000;
+    border: none;
+    transition: all 0.3s ease;
+}
+
+.btn-danger:hover {
+    background-color: #cc0000;
+    transform: scale(1.05);
+}
+
+.led-effect {
+    box-shadow: 0 0 10px #ff0000;
+    transition: all 0.3s ease;
+}
+
+.led-effect:hover {
+    box-shadow: 0 0 20px #ff0000, 0 0 40px #ff0000;
+}
+
+.search-container {
+    position: relative;
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 10px;  /* Añade espacio alrededor del contenedor de búsqueda */
+}
+
+.form-control {
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.form-control::placeholder {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.form-control:focus {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-color: #ff0000;
+    box-shadow: 0 0 5px rgba(255, 0, 0, 0.5);
+}
+
+.input-group-append .btn {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    padding: 0.5rem 1rem;
+    height: 100%;  /* Asegura que el botón tenga la misma altura que el input */
+}
+
+.search-results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background-color: #1e1e1e;
+    border: 1px solid rgba(255, 0, 0, 0.2);
+    border-top: none;
+    max-height: 400px;
+    overflow-y: auto;
+    z-index: 1000;
+    display: none;
+    border-radius: 0 0 15px 15px;
+}
+
+.search-result {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    cursor: pointer;
+    transition: background-color 0.3s, transform 0.3s;
+}
+
+.search-result:hover {
+    background-color: rgba(255, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+.search-result-poster {
+    width: 50px;
+    height: 75px;
+    object-fit: cover;
+    margin-right: 10px;
+    border-radius: 5px;
+}
+
+.search-result-info {
+    flex-grow: 1;
+}
+
+.search-result-info h4 {
+    margin: 0;
+    font-size: 1rem;
+    color: #ffffff;
+}
+
+.search-result-info p {
+    margin: 0;
+    font-size: 0.8rem;
+    color: #adb5bd;
+}
+
+.no-results {
+    padding: 15px;
+    text-align: center;
+    color: #adb5bd;
+}
+
+@media (max-width: 768px) {
+    .movie-poster {
+        height: 300px;
+    }
+
+    .search-container {
+        padding: 10px 15px;  /* Ajusta el padding para dispositivos móviles */
+    }
+
+    .input-group {
+        flex-wrap: nowrap;
+    }
+
+    .input-group-append {
+        width: auto;
+    }
+
+    .input-group-append .btn {
+        padding: 0.5rem;
+        height: 100%;  /* Mantiene la altura consistente en móviles */
+    }
+}
+</style>
+{% endblock %}

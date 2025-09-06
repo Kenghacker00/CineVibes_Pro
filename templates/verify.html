@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+
+{% block title %}CineVibes - Verificar Cuenta{% endblock %}
+
+{% block content %}
+<div class="container animate__animated animate__fadeIn">
+    <h2 class="text-light text-center mb-4">Verificar Cuenta</h2>
+    <form method="POST" class="text-center">
+        <div class="form-group mb-4">
+            <input type="text" name="code" class="form-control form-control-lg bg-transparent text-light" placeholder="Ingrese el código de verificación" required>
+            <div class="invalid-feedback text-warning">
+                Por favor, ingrese el código de verificación.
+            </div>
+        </div>
+        <button type="submit" class="btn btn-danger btn-lg led-effect">Verificar</button>
+    </form>
+    <div class="mt-4">
+        <p class="text-light">¿No recibiste el código? <a href="{{ url_for('resend_verification_code', email=email) }}" class="text-danger">Reenviar código</a></p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+body {
+    background-color: #1a1a1a;
+}
+
+.container {
+    background: rgba(255, 0, 0, 0.1);
+    border-radius: 15px;
+    padding: 20px;
+    box-shadow: 0 4px 20px rgba(255, 0, 0, 0.5);
+    backdrop-filter: blur(10px);
+    border: 2px solid #ff0000;
+    max-width: 500px;
+    margin-top: 50px;
+}
+
+.form-control {
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+}
+
+.form-control::placeholder {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.form-control:focus {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-color: #ff0000;
+    box-shadow: 0 0 5px rgba(255, 0, 0, 0.5);
+}
+
+.btn-danger {
+    background-color: #ff0000;
+    border: none;
+    transition: all 0.3s ease;
+}
+
+.btn-danger:hover {
+    background-color: #cc0000;
+    transform: scale(1.05);
+}
+
+.led-effect {
+    box-shadow: 0 0 10px #ff0000;
+    transition: all 0.3s ease;
+}
+
+.led-effect:hover {
+    box-shadow: 0 0 20px #ff0000, 0 0 40px #ff0000;
+}
+
+.text-danger {
+    color: #ff0000 !important;
+}
+
+.text-danger:hover {
+    color: #cc0000 !important;
+    text-decoration: underline;
+}
+</style>
+{% endblock %}

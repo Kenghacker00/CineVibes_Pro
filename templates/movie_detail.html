@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block title %}{{ movie.title }} - CineVibes{% endblock %}
+
+{% block content %}
+<div class="container mt-4 animate__animated animate__fadeIn">
+    <div class="row">
+        <div class="col-md-4 col-12 mb-3 d-flex justify-content-center">
+            <img loading="lazy" src="{{ movie.poster }}" alt="{{ movie.title }}" class="img-fluid rounded movie-poster">
+        </div>
+        <div class="col-md-8 col-12 d-flex flex-column justify-content-center">
+            <h1 class="mb-3 movie-title text-center">{{ movie.title }}</h1>
+            <p class="text-center"><strong>Año:</strong> {{ movie.year }}</p>
+            <p class="text-center"><strong>Director:</strong> {{ movie.director }}</p>
+            <p class="text-center"><strong>Actores:</strong> {{ movie.actors }}</p>
+            <p class="text-center"><strong>Género:</strong> {{ movie.genre }}</p>
+            <p class="text-center"><strong>Calificación IMDB:</strong> {{ movie.imdb_rating }}</p>
+            <p class="text-center"><strong>Duración:</strong> {{ movie.runtime }}</p>
+            <h3 class="mt-4 text-center">Sinopsis</h3>
+            <p class="text-center">{{ movie.plot }}</p>
+            <div class="mt-4 text-center">
+                {% if movie.is_available %}
+                    <a href="{{ url_for('movie_player', movie_id=movie.imdb_id) }}" class="btn btn-danger led-effect">Ver Película</a>
+                {% else %}
+                    <a href="{{ url_for('request_movie') }}?title={{ movie.title }}&year={{ movie.year }}" class="btn btn-success led-effect">Solicitar Película</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+body {
+    background-color: #0d1117;
+    color: #c9d1d9;
+}
+
+.container {
+    background-color: rgba(255, 0, 0, 0.1);
+    border-radius: 15px;
+    padding: 20px;
+    box-shadow: 0 4px 20px rgba(255, 0, 0, 0.5);
+}
+
+.movie-poster {
+    transition: transform 0.3s ease;
+    max-height: 400px;
+    object-fit: cover;
+    border: 2px solid #ff0000;
+}
+
+.movie-poster:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 20px rgba(255, 0, 0, 1);
+}
+
+.movie-title {
+    color: #ff0000;
+    transition: text-shadow 0.3s ease;
+}
+
+.movie-title:hover {
+    text-shadow: 0 0 10px rgba(255, 0, 0, 1), 0 0 20px rgba(255, 0, 0, 1);
+}
+
+.btn-danger, .btn-success {
+    transition: all 0.3s ease;
+}
+
+.btn-danger {
+    background-color: #ff0000;
+    border: none;
+}
+
+.btn-danger:hover {
+    background-color: #cc0000;
+    transform: scale(1.05);
+}
+
+.btn-success {
+    background-color: #28a745;
+    border: none;
+}
+
+.btn-success:hover {
+    background-color: #218838;
+    transform: scale(1.05);
+}
+
+.led-effect {
+    box-shadow: 0 0 10px #ff0000;
+}
+
+.led-effect:hover {
+    box-shadow: 0 0 20px #ff0000, 0 0 40px #ff0000;
+}
+
+@media (max-width: 768px) {
+    .movie-title {
+        font-size: 1.5rem;
+    }
+
+    .movie-poster {
+        max-height: 300px;
+    }
+}
+</style>
+{% endblock %}

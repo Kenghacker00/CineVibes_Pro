@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}CineVibes - Error Interno del Servidor{% endblock %}
+
+{% block content %}
+<div class="container animate__animated animate__fadeIn text-center mt-5">
+    <h2 class="text-danger">500 - Error Interno del Servidor</h2>
+    <p class="text-light">Ocurrió un error en el servidor. Por favor, intenta más tarde.</p>
+    <a href="{{ url_for('index') }}" class="btn btn-danger led-effect">Volver al Inicio</a>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    body {
+        background-color: #0d1117;
+    }
+    .text-danger {
+        font-size: 2rem;
+        color: #ff0000 !important;
+    }
+    .text-light {
+        font-size: 1.2rem;
+    }
+    .btn-danger {
+        background-color: #ff0000;
+        border: none;
+        transition: all 0.3s ease;
+        padding: 10px 20px;
+        border-radius: 5px;
+    }
+    .btn-danger:hover {
+        background-color: #cc0000;
+        transform: translateY(-2px);
+    }
+    .led-effect {
+        box-shadow: 0 0 10px #ff0000;
+    }
+    .led-effect:hover {
+        box-shadow: 0 0 20px #ff0000, 0 0 40px #ff0000;
+    }
+</style>
+{% endblock %}

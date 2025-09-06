@@ -1,0 +1,155 @@
+{% extends 'base.html' %}
+
+{% block title %}Registro - CineVibes{% endblock %}
+
+{% block content %}
+<div class="container animate__animated animate__fadeIn">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="glass-effect p-4 rounded shadow">
+                <div class="text-center mb-4">
+                    <h2 class="text-light">Registro de Usuario</h2>
+                </div>
+                <div id="message"></div>
+                <form id="register-form" method="POST">
+                    <div class="mb-3">
+                        <label for="nickname" class="form-label text-light">Apodo:</label>
+                        <input type="text" class="form-control bg-transparent text-light" id="nickname" name="nickname" required placeholder="Ingresa tu apodo">
+                    </div>
+                    <div class="mb-3">
+                        <label for="email" class="form-label text-light">Correo Electrónico:</label>
+                        <input type="email" class="form-control bg-transparent text-light" id="email" name="email" required placeholder="Ingresa tu correo electrónico">
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label text-light">Contraseña:</label>
+                        <div class="input-group">
+                            <input type="password" class="form-control bg-transparent text-light" id="password" name="password" required placeholder="Crea una contraseña">
+                            <button class="btn btn-outline-light" type="button" id="togglePassword">
+                                <i class="fas fa-eye" id="eyeIcon"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-danger btn-block led-effect">Registrar</button>
+                </form>
+                <div class="mt-3 text-center">
+                    <a href="{{ url_for('login') }}" class="text-light">¿Ya tienes una cuenta? Inicia sesión aquí.</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+body {
+    background-color: #1a1a1a;
+}
+
+.glass-effect {
+    background: rgba(255, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+    border: 2px solid #ff0000;
+    border-radius: 15px;
+    padding: 25px;
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.glass-effect:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 20px rgba(255, 0, 0, 0.5);
+}
+
+.btn-danger {
+    background-color: #ff0000;
+    border: none;
+    transition: all 0.3s ease;
+}
+
+.btn-danger:hover {
+    background-color: #cc0000;
+    transform: scale(1.05);
+}
+
+.led-effect {
+    box-shadow: 0 0 10px #ff0000;
+    transition: all 0.3s ease;
+}
+
+.led-effect:hover {
+    box-shadow: 0 0 20px #ff0000, 0 0 40px #ff0000;
+}
+
+.form-label {
+    font-weight: bold;
+}
+
+.text-light {
+    color: #f8f9fa;
+}
+
+.text-light:hover {
+    text-decoration: underline;
+}
+
+.form-control {
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+}
+
+.form-control:focus {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-color: #ff0000;
+    box-shadow: 0 0 5px rgba(255, 0, 0, 0.5);
+}
+
+.input-group .btn {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+}
+
+.input-group .form-control {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+#togglePassword {
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    transition: all 0.3s ease;
+}
+
+#togglePassword:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    color: #ff0000;
+}
+
+#togglePassword:focus {
+    box-shadow: none;
+    outline: none;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('togglePassword').addEventListener('click', function () {
+    const passwordInput = document.getElementById('password');
+    const eyeIcon = document.getElementById('eyeIcon');
+    const toggleButton = document.getElementById('togglePassword');
+    if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        eyeIcon.classList.remove('fa-eye');
+        eyeIcon.classList.add('fa-eye-slash');
+        toggleButton.classList.add('active');
+    } else {
+        passwordInput.type = 'password';
+        eyeIcon.classList.remove('fa-eye-slash');
+        eyeIcon.classList.add('fa-eye');
+        toggleButton.classList.remove('active');
+    }
+});
+</script>
+{% endblock %}

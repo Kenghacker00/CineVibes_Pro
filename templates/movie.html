@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+
+{% block title %}{{ movie.title }}{% endblock %}
+
+{% block content %}
+<div class="container animate__animated animate__fadeIn">
+    <div class="movie-details glass-effect">
+        <div class="row">
+            <div class="col-md-4">
+                <img loading="lazy" src="{{ movie.poster }}" alt="{{ movie.title }} Poster" class="movie-poster">
+            </div>
+            <div class="col-md-8">
+                <h1 class="movie-title">{{ movie.title }}</h1>
+                <div class="movie-info">
+                    <p class="year"><i class="fas fa-calendar-alt"></i> {{ movie.year }}</p>
+                    <p class="rating"><i class="fas fa-star"></i> Calificación IMDb: {{ movie.imdb_rating if movie.imdb_rating != 'N/A' else 'N/A' }}/10</p>
+                    <!-- Puedes agregar más información aquí -->
+                </div>
+            </div>
+        </div>
+
+        <div class="movie-player-container">
+            <div class="movie-player glass-effect">
+                <iframe
+                    src="https://example.com/movie-player/{{ movie.imdb_id }}"
+                    frameborder="0"
+                    allowfullscreen>
+                </iframe>
+            </div>
+        </div>
+    </div>
+
+    <div class="reviews-section glass-effect">
+        <h2><i class="fas fa-comments"></i> Reseñas</h2>
+
+        {% if current_user.is_authenticated %}
+            <div class="review-form">
+                <form method="POST" action="{{ url_for('movie', imdb_id=movie.imdb_id) }}" class="glass-effect">
+                    {{ form.hidden_tag() }}
+                    <div class="form-group">
+                        {{ form.content.label(class="form-label") }}
+                        {{ form.content(class="form-control") }}
+                    </div>
+                    <div class="form-group">
+                        {{ form.rating.label(class="form-label") }}
+                        {{ form.rating(class="form-control") }}
+                    </div>
+                    {{ form.submit(class="btn btn-primary") }}
+                </form>
+            </div>
+        {% else %}
+            <p class="login-prompt">
+                <a href="{{ url_for('login') }}">Inicia sesión</a> para dejar una reseña
+            </p>
+        {% endif %}
+
+        <div class="reviews-list">
+            {% for review in reviews %}
+                <div class="review-card animate__animated animate__fadeIn">
+                    <div class="review-header">
+                        <h3>{{ review.author.username }}</h3>
+                        <div class="rating">
+                            {% for i in range(review.rating) %}
+                                <i class="fas fa-star"></i>
+                            {% endfor %}
+                            {% for i in range(5 - review.rating) %}
+                                <i class="far fa-star"></i>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <p class="review-content">{{ review.content }}</p>
+                    <p class="review-timestamp">
+                        <i class="far fa-clock"></i>
+                        {{ review.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}
+                    </p>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.movie-details {
+    margin-bottom: 2rem;
+}
+
+.movie-poster {
+    width: 100%;
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.3);
+}
+
+.movie-title {
+    color: var(--light-text);
+    margin-bottom: 1rem;
+}
+
+.movie-info {
+    color: var(--light-text);
+    opacity: 0.9;
+}
+
+.movie-player-container {
+    margin: 2rem 0;
+}
+
+.movie-player {
+    position: relative;
+    padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+    height: 0;
+    overflow: hidden;
+}
+
+.movie-player iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 10px;
+}
+
+.reviews-section {
+    margin-top: 2rem;
+}
+
+.review-form {
+    margin-bottom: 2rem;
+    padding: 1rem;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-control {
+    background: rgba(255, 255, 255, 0. 1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: var(--light-text);
+}
+
+.form-control:focus {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: var(--accent-color);
+    color: var(--light-text);
+    box-shadow: none;
+}
+
+.login-prompt {
+    text-align: center;
+    padding: 1rem;
+    color: var(--light-text);
+}
+
+.review-card {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    transition: transform 0.3s ease;
+}
+
+.review-card:hover {
+    transform: translateY(-5px);
+}
+
+.review-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.rating {
+    color: #ffd700;
+}
+
+.review-content {
+    color: var(--light-text);
+    opacity: 0.9;
+    margin: 1rem 0;
+}
+
+.review-timestamp {
+    color: var(--light-text);
+    opacity: 0.7;
+    font-size: 0.9rem;
+}
+
+@media (max-width: 768px) {
+    .movie-details {
+        text-align: center;
+    }
+
+    .movie-poster {
+        max-width: 300px;
+        margin: 0 auto 1rem;
+    }
+}
+</style>
+{% endblock %}

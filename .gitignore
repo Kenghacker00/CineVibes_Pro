@@ -1,0 +1,33 @@
+### Secrets / env
+.env
+.env.*
+
+### Databases
+database/**
+!database/.gitkeep
+*.db
+
+### Migrations / scripts (avoid committing creation commands)
+migrations/**
+scripts/**
+*.sql
+
+### Uploads (runtime artifacts)
+static/uploads/**
+!static/uploads/.gitkeep
+
+### Exports / logs
+exports/**
+*.log
+
+### Python caches / envs
+__pycache__/
+**/__pycache__/
+*.pyc
+.venv/
+venv/
+
+### OS / editor junk
+.DS_Store
+Thumbs.db
+.vscode/

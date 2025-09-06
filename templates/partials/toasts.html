@@ -1,0 +1,34 @@
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1100" aria-live="polite" aria-atomic="true">
+      {% for category, message in messages %}
+        {% set cls = 'danger' if category in ['error','danger'] else ('warning' if category in ['info','warning'] else ('success' if category in ['success'] else 'secondary')) %}
+        {% set autohide = 'false' if category in ['error','danger','warning'] else 'true' %}
+        {% set delay = '12000' if category in ['success','info'] else '20000' %}
+        <div class="toast text-bg-{{ cls }} border-0" role="alert" aria-live="assertive" aria-atomic="true" data-bs-autohide="{{ autohide }}" data-bs-delay="{{ delay }}">
+          <div class="d-flex">
+            <div class="toast-body">
+              {{ message }}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+    <script>
+      (function(){
+        const container = document.querySelector('.toast-container');
+        if (!container) return;
+        const toastsEl = container.querySelectorAll('.toast');
+        toastsEl.forEach(el => {
+          const opts = {
+            autohide: el.getAttribute('data-bs-autohide') !== 'false',
+            delay: parseInt(el.getAttribute('data-bs-delay') || '12000', 10)
+          };
+          const t = new bootstrap.Toast(el, opts);
+          t.show();
+        });
+      })();
+    </script>
+  {% endif %}
+{% endwith %}

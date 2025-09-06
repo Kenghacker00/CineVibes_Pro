@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}CineVibes - Editar Perfil{% endblock %}
+
+{% block content %}
+<div class="container animate__animated animate__fadeIn">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card glass-effect p-4 rounded">
+                <div class="card-body">
+                    <h2 class="card-title text-center mb-4 text-light">Editar Perfil</h2>
+                    <form method="POST" action="{{ url_for('edit_profile') }}">
+                        <div class="mb-3">
+                            <label for="nickname" class="form-label text-light">Nickname</label>
+                            <input type="text" class="form-control bg-transparent text-light" id="nickname" name="nickname" value="{{ user.nickname }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="email" class="form-label text-light">Email</label>
+                            <input type="email" class="form-control bg-transparent text-light" id="email" name="email" value="{{ user.email }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="new_password" class="form-label text-light">Nueva Contraseña (dejar en blanco para no cambiar)</label>
+                            <input type="password" class="form-control bg-transparent text-light" id="new_password" name="new_password">
+                        </div>
+                        <div class="mb-3">
+                            <label for="confirm_password" class="form-label text-light">Confirmar Nueva Contraseña</label>
+                            <input type="password" class="form-control bg-transparent text-light" id="confirm_password" name="confirm_password">
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-danger led-effect">Actualizar Perfil</button>
+                        </div>
+                    </form>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+body {
+    background-color: #1a1a1a;
+}
+
+.card {
+    background: rgba(255, 0, 0, 0.1);
+    border: 2px solid #ff0000;
+    backdrop-filter: blur(10px);
+}
+
+.form-control {
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+}
+
+.form-control::placeholder {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.form-control:focus {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-color: #ff0000;
+    box-shadow: 0 0 5px rgba(255, 0, 0, 0.5);
+}
+
+.btn-danger {
+    background-color: #ff0000;
+    border: none;
+    transition: all 0.3s ease;
+}
+
+.btn-danger:hover {
+    background-color: #cc0000;
+    transform: scale(1.05);
+}
+
+.led-effect {
+    box-shadow: 0 0 10px #ff0000;
+    transition: all 0.3s ease;
+}
+
+.led-effect:hover {
+    box-shadow: 0 0 20px #ff0000, 0 0 40px #ff0000;
+}
+</style>
+{% endblock %}

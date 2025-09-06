@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}CineVibes - Ver Películas{% endblock %}
+
+{% block content %}
+<div class="container-fluid animate__animated animate__fadeIn">
+    <header>
+        {% if user %}
+            <p class="text-center" style="font-size: 30px; color: #ff4081;">Bienvenid@, {{ user.nickname }}!</p>
+        {% else %}
+            <p class="text-center">Por favor, <a href="{{ url_for('login') }}">inicia sesión</a> para ver las películas.</p>
+        {% endif %}
+    </header>
+
+    <section class="featured-movies mb-5">
+        <h2 class="section-title text-center mb-4"><i class="fas fa-film"></i> Películas Disponibles</h2>
+        <div class="row">
+            {% if movies %}
+                {% for movie in movies %}
+                    <div class="col-md-6 mb-4">
+                        <div class="movie-card glass-effect animate__animated animate__fadeIn">
+                            <div class="row no-gutters">
+                                <div class="col-md-4">
+                                    <img loading="lazy" src="{{ movie.poster }}" alt="{{ movie.title }} Poster" class="movie-poster">
+                                </div>
+                                <div class="col-md-8">
+                                    <div class="movie-info p-4 bg-dark text-white rounded">
+                                        <h3 class="movie-title" style="color: #ff4081;">{{ movie.title }}</h3>
+                                        <div class="movie-meta">
+                                            <span><i class="fas fa-calendar"></i> {{ movie.year }}</span>
+                                            <span><i class="fas fa-film"></i> {{ movie.director }}</span>
+                                        </div>
+                                        <div class="movie-description">
+                                            {{ movie.plot }}
+                                        </div>
+                                        <a href="{{ url_for('movie_player', movie_id=movie.imdb_id) }}" class="btn btn-danger btn-watch mt-2">
+                                            <i class="fas fa-play"></i> Ver Película
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <p>No hay películas disponibles en este momento.</p>
+            {% endif %}
+        </div>
+    </section>
+</div>
+
+<!-- JavaScript para efectos -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const movieCards = document.querySelectorAll('.movie-card');
+
+        movieCards.forEach(card => {
+            card.addEventListener('mouseenter', () => {
+                card.classList.add('shadow-lg');
+                card.style.transform = 'scale(1.05)';
+            });
+
+            card.addEventListener('mouseleave', () => {
+                card.classList.remove('shadow-lg');
+                card.style.transform = 'scale(1)';
+            });
+        });
+    });
+</script>
+{% endblock %}

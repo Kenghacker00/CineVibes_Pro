@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+
+{% block title %}CineVibes - Solicitar Película{% endblock %}
+
+{% block content %}
+<div class="container animate__animated animate__fadeIn">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="glass-effect card border-0 shadow-lg mt-4">
+                <div class="card-header bg-transparent border-0 text-center">
+                    <h2 class="text-light mb-0">
+                        <i class="fas fa-film me-2 text-danger"></i>
+                        Solicitar una Película
+                    </h2>
+                </div>
+                <div class="card-body p-4">
+                    <div class="text-center mb-4">
+                        <p class="text-light opacity-75">
+                            ¿No encuentras la película que buscas?
+                            <br>
+                            ¡Solicítala y haremos lo posible por agregarla a nuestra colección!
+                        </p>
+                    </div>
+
+                    <form id="requestMovieForm" action="{{ url_for('request_movie') }}" method="POST" class="needs-validation" novalidate>
+                        <!-- Título de la Película -->
+                        <div class="form-group mb-4">
+                            <label for="movie_title" class="form-label text-light">
+                                <i class="fas fa-video me-2 text-danger"></i>
+                                Título de la Película
+                            </label>
+                            <input type="text"
+                                   class="form-control form-control-lg bg-transparent text-light"
+                                   id="movie_title"
+                                   name="movie_title"
+                                   value="{{ title }}"
+                                   required>
+                        </div>
+
+                        <!-- Año de la Película (opcional) -->
+                        <div class="form-group mb-4">
+                            <label for="movie_year" class="form-label text-light">
+                                <i class="fas fa-calendar me-2 text-danger"></i>
+                                Año de la Película (Opcional)
+                            </label>
+                            <input type="text"
+                                   class="form-control form-control-lg bg-transparent text-light"
+                                   id="movie_year"
+                                   name="movie_year"
+                                   value="{{ year }}">
+                        </div>
+
+                        <!-- Correo Electrónico -->
+                        <div class="form-group mb-4">
+                            <label for="user_email" class="form-label text-light">
+                                <i class="fas fa-envelope me-2 text-danger"></i>
+                                Tu Correo Electrónico
+                            </label>
+                            <input type="email"
+                                   class="form-control form-control-lg bg-transparent text-light"
+                                   id="user_email"
+                                   name="user_email"
+                                   value="{{ user_email }}"
+                                   required>
+                            <small class="form-text text-light opacity-75">
+                                Te notificaremos cuando la película esté disponible.
+                            </small>
+                        </div>
+
+                        <!-- Información Adicional -->
+                        <div class="form-group mb-4">
+                            <label for="additional_info" class="form-label text-light">
+                                <i class="fas fa-info-circle me-2 text-danger"></i>
+                                Información Adicional (Opcional)
+                            </label>
+                            <textarea class="form-control bg-transparent text-light"
+                                      id="additional_info"
+                                      name="additional_info"
+                                      rows="3"
+                                      placeholder="Año de lanzamiento, director, actores principales..."></textarea>
+                        </div>
+
+                        <!-- Botón de Envío -->
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-lg btn-danger led-effect">
+                                <i class="fas fa-paper-plane me-2"></i>
+                                Enviar Solicitud
+                            </button>
+                        </div>
+                    </form>
+
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+body {
+    background-color: #0d1117;
+}
+
+.glass-effect {
+    background: rgba(255, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+    border: 2px solid #ff0000;
+    border-radius: 15px;
+    padding: 25px;
+}
+
+.card-header {
+    background: rgba(255, 0, 0, 0.2);
+    border-bottom: 1px solid rgba(255, 0, 0, 0.3);
+}
+
+.btn-danger {
+    background-color: #ff0000;
+    border: none;
+    transition: all 0.3s ease;
+}
+
+.btn-danger:hover {
+    background-color: #cc0000;
+    transform: scale(1.05);
+}
+
+.led-effect {
+    box-shadow: 0 0 10px #ff0000;
+}
+
+.led-effect:hover {
+    box-shadow: 0 0 20px #ff0000, 0 0 40px #ff0000;
+}
+
+.form-control {
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+}
+
+.form-control:focus {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-color: #ff0000;
+    box-shadow: 0 0 5px rgba(255, 0, 0, 0.5);
+}
+
+.text-danger {
+    color: #ff0000 !important;
+}
+
+.invalid-feedback {
+    display: block;
+    font-size: 0.9rem;
+    color: #ff0000;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('requestMovieForm').addEventListener('submit', function(event) {
+    var isValid = true;
+
+    // Validar el título de la película
+    var movieTitle = document.getElementById('movie_title');
+    if (!movieTitle.value.trim()) {
+        movieTitle.classList.add('is-invalid');
+        isValid = false;
+    } else {
+        movieTitle.classList.remove('is-invalid');
+    }
+
+    // Validar el correo electrónico
+    var userEmail = document.getElementById('user_email');
+    if (!userEmail.value.trim()) {
+        userEmail.classList.add('is-invalid');
+        isValid = false;
+    } else {
+        userEmail.classList.remove('is-invalid');
+    }
+
+    if (!isValid) {
+        event.preventDefault(); // Evitar el envío del formulario si hay errores
+    }
+});
+</script>
+{% endblock %}

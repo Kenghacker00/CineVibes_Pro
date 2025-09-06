@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+
+{% block title %}CineVibes - Inicio{% endblock %}
+
+{% block content %}
+<div class="container-fluid animate__animated animate__fadeIn">
+    <!-- Hero Section -->
+    <div class="hero-section text-center mb-5 p-5 hero-background">
+    <video autoplay muted loop playsinline class="video-background">
+            <source src="{{ url_for('static', filename='marvel.mp4') }}" type="video/mp4">
+            Tu navegador no soporta el video.
+        </video>
+        <div class="text-overlay">
+            <h1 class="display-4 mb-4">Bienvenido a CineVibes</h1>
+            <p class="lead">Tu destino para el mejor entretenimiento cinematográfico</p>
+            <a href="{{ url_for('search') }}" class="btn btn-lg btn-danger btn-hover led-effect">Buscar Películas</a>
+        </div>
+    </div>
+
+
+    <!-- Featured Movies Section -->
+    <section class="featured-movies mb-5">
+        <h2 class="section-title text-center mb-4 text-white"><i class="fas fa-star"></i> Películas Destacadas</h2>
+        <div class="row">
+            <!-- Movie Card Template -->
+            {% for movie in movies %}
+            <div class="col-12 col-sm-6 col-md-4 mb-4">
+                <div class="movie-card glass-effect animate__animated animate__fadeIn led-effect">
+                    <img loading="lazy" src="{{ movie.poster }}" alt="{{ movie.title }} Poster" class="movie-poster img-fluid">
+                    <div class="movie-info p-3 bg-dark text-white rounded d-flex flex-column">
+                        <h3 class="movie-title">{{ movie.title }}</h3>
+                <div class="movie-meta mb-2">
+                    <span><i class="fas fa-calendar"></i> {{ movie.year }}</span>
+                    <span><i class="fas fa-film"></i> {{ movie.director }}</span>
+                </div>
+                    <div class="movie-description flex-grow-1">
+                    {{ movie.plot }}
+                </div>
+                <a href="{{ url_for('movie_player', movie_id=movie.imdb_id) }}" class="btn btn-danger btn-watch mt-2 btn-hover led-effect">
+                <i class="fas fa-play"></i> Ver Película
+            </a>
+        </div>
+    </div>
+</div>
+{% endfor %}
+        </div>
+    </section>
+
+    <!-- Paginación -->
+    <div class="pagination">
+        {% if current_page > 1 %}
+            <a href="{{ url_for('index', page=current_page - 1) }}" class="btn btn-danger led-effect">Anterior</a>
+        {% endif %}
+        {% for page in range(1, total_pages + 1) %}
+            <a href="{{ url_for('index', page=page) }}" class="btn btn-secondary {% if page == current_page %}active{% endif %}">{{ page }}</a>
+        {% endfor %}
+        {% if current_page < total_pages %}
+            <a href="{{ url_for('index', page=current_page + 1) }}" class="btn btn-danger led-effect">Siguiente</a>
+        {% endif %}
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const movieCards = document.querySelectorAll('.movie-card');
+
+        movieCards.forEach(card => {
+            card.addEventListener('mouseenter', () => {
+                card.classList.add('shadow-lg');
+                card.style.transform = 'scale(1.05)';
+            });
+
+            card.addEventListener('mouseleave', () => {
+                card.classList.remove('shadow-lg');
+                card.style.transform = 'scale(1)';
+            });
+        });
+    });
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    body {
+        background-color: #121212;
+    }
+
+    .hero-background {
+        position: relative;
+        overflow: hidden;
+        color: white;
+    }
+
+    .video-background {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        filter: blur(20px);
+        z-index: -1;
+    }
+
+    .text-overlay {
+        position: relative;
+        z-index: 2;
+        background-color: rgba(0, 0, 0, 0.5);
+        padding: 20px;
+        border-radius: 10px;
+        display: inline-block;
+    }
+
+    .text-overlay h1,
+    .text-overlay p {
+        margin: 0;
+    }
+
+    .hero-section .btn {
+        position: relative;
+        z-index: 2;
+    margin-top: 12px; /* Slightly separate the button from the subtitle */
+    }
+
+    .movie-card {
+        position: relative;
+        overflow: hidden;
+        transition: transform 0.3s;
+        border-radius: 10px;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        border: 2px solid transparent;
+        box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+    }
+
+    .movie-card:hover {
+        border: 2px solid #ff0000;
+        box-shadow: 0 0 20px rgba(255, 0, 0, 1);
+    }
+
+    .movie-poster {
+        max-height: 250px;
+        width: 100%;
+        object-fit: contain;
+    }
+
+    .movie-info {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+    .movie-description {
+        overflow: visible;
+        text-overflow: clip;
+        white-space: normal;
+    }
+
+    .btn-watch {
+        margin-top: auto;
+    }
+
+    .btn-danger {
+        background-color: #ff0000;
+        border: none;
+        transition: all 0.3s ease;
+    }
+
+    .btn-danger:hover {
+        background-color: #cc0000;
+        transform: scale(1.05);
+    }
+
+    .led-effect {
+        box-shadow: 0 0 10px #ff0000;
+    }
+
+    .led-effect:hover {
+        box-shadow: 0 0 20px #ff0000, 0 0 40px #ff0000;
+    }
+
+    .pagination {
+        text-align: center;
+        margin: 20px 0;
+    }
+
+    .pagination .btn {
+        margin: 0 5px;
+    }
+
+    .pagination .active {
+        background-color: #ff6f91;
+        color: white;
+    }
+
+    @media (max-width: 768px) {
+        .movie-poster {
+            max-height: 200px;
+        }
+    }
+</style>
+{% endblock %}
+{% endblock %}

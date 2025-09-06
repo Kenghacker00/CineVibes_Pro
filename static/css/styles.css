@@ -1,0 +1,256 @@
+/* Variables */
+:root {
+    --primary-color: #1a1a2e;
+    --secondary-color: #16213e;
+    --accent-color: #0f3460;
+    --text-color: #e94560;
+    --light-text: #f1f1f1;
+    --background-color: #f8f9fa;
+    --white: #fff;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+    --card-bg: rgba(255, 255, 255, 0.1);
+    --card-border: rgba(255, 255, 255, 0.2);
+}
+
+/* Estilos generales */
+body {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: var(--light-text);
+    font-family: 'Arial', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+main {
+    flex: 1;
+    padding-top: 80px; /* Espaciado superior para el contenido principal */
+}
+
+/* Navbar */
+.navbar {
+    background: linear-gradient(to right, var(--primary-color), var(--secondary-color));
+    padding: 1rem;
+    box-shadow: 0 2px 4px var(--shadow-color);
+}
+
+.navbar-brand {
+    font-weight: bold;
+    font-size: 1.5rem;
+    color: var(--text-color);
+}
+
+.nav-link {
+    font-weight: 500;
+    transition: color 0.3s ease, transform 0.3s ease;
+}
+
+.nav-link:hover {
+    color: var(--text-color) !important;
+    transform: scale(1.05); /* Efecto de escala al pasar el mouse */
+}
+
+/* Películas destacadas */
+.movie-card {
+    display: flex;
+    flex-direction: column; /* Asegura que el contenido se apile verticalmente */
+    background: var(--card-bg);
+    border-radius: 15px;
+    overflow: hidden;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    height: 420px; /* Altura fija para todas las tarjetas */
+}
+
+.movie-card:hover {
+    transform: translateY(-5px); /* Efecto de elevación al pasar el mouse */
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+}
+
+.movie-poster {
+    width: 100%; /* Asegura que la imagen ocupe todo el ancho */
+    height: auto; /* Mantiene la proporción de la imagen */
+    object-fit: contain; /* Asegura que la imagen se ajuste sin recortarse */
+    max-height: 400px; /* Altura máxima para la imagen */
+}
+
+.movie-info {
+    padding: 20px;
+    flex: 1; /* Permite que el contenido ocupe el espacio restante */
+    background-color: rgba(255, 255, 255, 0.9);
+    border-radius: 10px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column; /* Asegura que el contenido se apile verticalmente */
+    justify-content: space-between; /* Espacia el contenido para que ocupe el espacio disponible */
+}
+
+.movie-info h3 {
+    margin-bottom: 15px;
+    color: #333;
+    font-size: 1.25rem;
+}
+
+.movie-info p {
+    margin-bottom: 10px;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+/* Botones */
+.btn-primary {
+    background-color: var(--accent-color);
+    border: none;
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    background-color: var(--text-color);
+    transform: translateY(-2px); /* Efecto de elevación al pasar el mouse */
+}
+
+.btn-danger {
+    background-color: #ff4081;
+    border: none;
+}
+
+.btn-danger:hover {
+    background-color: #ff80ab; /* Color de fondo al pasar el mouse */
+}
+
+/* Footer */
+.footer {
+    background: var(--primary-color);
+    padding: 20px 0 ;
+    color: var(--light-text);
+}
+
+.footer a {
+    color: var(--light-text);
+    transition: color 0.3s ease;
+}
+
+.footer a:hover {
+    color: var(--text-color);
+}
+
+/* Animaciones */
+.animate__animated {
+    animation-duration: 0.5s; /* Duración de la animación */
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .movie-card {
+        flex-direction: column; /* Cambia la dirección a columna en pantallas pequeñas */
+    }
+
+    .movie-poster {
+        max-height: 200px; /* Ajusta la altura para pantallas pequeñas */
+    }
+
+    .movie-info {
+        padding: 15px; /* Reduce el espaciado en pantallas pequeñas */
+    }
+}
+
+.hero-section {
+    background: rgba(0, 0, 0, 0.8);
+    border-radius: 10px;
+    padding: 40px; /* Espaciado interno para la sección hero */
+}
+
+.hero-background {
+    position: relative; /* Necesario para el posicionamiento del pseudo-elemento */
+    overflow: hidden; /* Asegúrate de que el contenido no se desborde */
+    color: white; /* Asegúrate de que el texto sea legible */
+    padding: 5rem 0; /* Ajusta el padding si es necesario */
+}
+
+.hero-background::before {
+    content: ""; /* Necesario para que el pseudo-elemento se muestre */
+    position: absolute; /* Posiciona el pseudo-elemento */
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: url('https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/a773c308-2230-4544-b22c-7bc6be0505b5/dexer0v-e2013932-0509-4055-8386-e4bcf6ed4269.png/v1/fill/w_1024,h_395,q_80,strp/disney__marvel_banner_by_comicproductions123_dexer0v-fullview.jpg?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7ImhlaWdodCI6Ijw9Mzk1IiwicGF0aCI6IlwvZlwvYTc3M2MzMDgtMjIzMC00NTQ0LWIyMmMtN2JjNmJlMDUwNWI1XC9kZXhlcjB2LWUyMDEzOTMyLTA1MDktNDA1NS04Mzg2LWU0YmNmNmVkNDI2OS5wbmciLCJ3aWR0aCI6Ijw9MTAyNCJ9XV0sImF1ZCI6WyJ1cm46c2VydmljZTppbWFnZS5vcGVyYXRpb25zIl19.4JWz1rmvOLmOiUXMyprUSSpEyu7BCqMTidU5Nyw8wpg');
+    background-size: cover; /* Asegura que la imagen cubra todo el área */
+    background-position: center; /* Centra la imagen de fondo */
+    filter: blur(30px); /* Aplica un desenfoque a la imagen de fondo */
+    z-index: 1; /* Asegura que el fondo esté detrás del contenido */
+}
+
+.hero-background h1,
+.hero-background p {
+    position: relative; /* Asegúrate de que el texto esté por encima del pseudo-elemento */
+    z-index: 2; /* Asegura que el texto esté por encima del fondo desenfocado */
+}
+
+.hero-section h1 {
+    color: #ff4081; /* Color para el encabezado */
+}
+
+.hero-section p {
+    color: #ff4081; /* Color para el párrafo */
+}
+
+.hero-section .btn {
+    background-color: #ff4081; /* Color de fondo del botón */
+    color: white; /* Color del texto del botón */
+    position: relative; /* Asegúrate de que el texto esté por encima del pseudo-elemento */
+    z-index : 2; /* Asegura que el texto del botón esté por encima del fondo */
+}
+
+.hero-section .btn:hover {
+    background-color: #e63972; /* Color de fondo al pasar el mouse (opcional) */
+}
+
+.alert {
+    font-size: 1rem; /* Tamaño de fuente más grande */
+    margin-bottom: 1rem; /* Espaciado inferior */
+}
+
+.alert-success {
+    background-color: #d4edda; /* Color de fondo verde claro */
+    color: #155724; /* Color de texto verde oscuro */
+}
+
+.alert-error {
+    background-color: #f8d7da; /* Color de fondo rojo claro */
+    color: #721c24; /* Color de texto rojo oscuro */
+}
+
+.alert-warning {
+    background-color: #fff3cd; /* Color de fondo amarillo claro */
+    color: #856404; /* Color de texto amarillo oscuro */
+}
+
+.alert-dismissible .btn-close {
+    margin-left: 1rem; /* Espaciado a la izquierda del botón de cerrar */
+}
+
+/* Responsive refinements */
+@media (max-width: 576px) {
+    .container, .container-fluid {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+    }
+    .hero-background {
+        padding: 2.5rem 0; /* reduce padding en móviles */
+    }
+    .video-background {
+        width: 100%;
+        height: auto;
+    }
+    .movie-card {
+        height: auto; /* permitir que crezca con el contenido */
+    }
+    .movie-poster {
+        max-height: 260px; /* limitar altura de póster en móviles */
+    }
+    .navbar .btn, .btn {
+        white-space: normal; /* permitir wrap del texto */
+    }
+}

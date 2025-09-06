@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Resultados de Búsqueda - CineVibes{% endblock %}
+
+{% block content %}
+<div class="container animate__animated animate__fadeIn">
+    <h2 class="text-light text-center mb-4">Resultados de búsqueda para "{{ query }}"</h2>
+    <div class="row">
+        {% for movie in movies %}
+        <div class="col-md-4 mb-4">
+            <div class="card glass-effect border-0 shadow-lg movie-card-search">
+                <!-- Imagen de la película -->
+                <img loading="lazy" src="{{ movie.Poster }}" class="card-img-top movie-poster-search" alt="{{ movie.Title }}">
+                <div class="card-body text-center">
+                    <h5 class="card-title text-light">{{ movie.Title }}</h5>
+                    <p class="card-text text-light">Año: {{ movie.Year }}</p>
+                    {% if movie.is_available %}
+                        <!-- Botón para ver la película si está disponible -->
+                        <a href="{{ url_for('movie_player', movie_id=movie.imdbID) }}" class="btn btn-primary">Ver Película</a>
+                    {% else %}
+                        <!-- Botón para solicitar la película si no está disponible -->
+                        <a href="{{ url_for('request_movie') }}?title={{ movie.Title }}&year={{ movie.Year }}" class="btn btn-secondary">Solicitar</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% if not movies %}
+        <!-- Mensaje si no se encontraron resultados -->
+        <div class="text-center text-light mt-4">
+            <p>No se encontraron resultados para tu búsqueda.</p>
+            <a href="{{ url_for('index') }}" class="btn btn-primary">Volver a la página principal</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
