@@ -68,6 +68,33 @@ class ReviewController:
                 'user_id': review['user_id']  # Asegúrate de incluir el user_id
             } for review in reviews]
 
+    def get_latest_user_review_for_movie(self, user_id, movie_id):
+        """Obtiene la reseña más reciente de un usuario para una película, con datos del usuario."""
+        with connect(self.db) as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT r.*, u.nickname as user_nickname, u.profile_pic as user_profile_pic
+                FROM reviews r
+                JOIN users u ON r.user_id = u.id
+                WHERE r.movie_id = ? AND r.user_id = ?
+                ORDER BY r.created_at DESC
+                LIMIT 1
+            ''', (movie_id, user_id))
+            row = cursor.fetchone()
+            if not row:
+                return None
+            # row likely behaves like dict (sqlite3.Row or dict_row)
+            getter = (row.get if hasattr(row, 'get') else (lambda k: row[k]))
+            return {
+                'id': getter('id'),
+                'user_nickname': getter('user_nickname'),
+                'user_profile_pic': getter('user_profile_pic'),
+                'review_text': getter('review_text'),
+                'rating': getter('rating'),
+                'created_at': getter('created_at'),
+                'user_id': getter('user_id')
+            }
+
     def delete_review(self, review_id, user_id):
         """
         Elimina una reseña específica (solo si pertenece al usuario)
@@ -109,6 +136,30 @@ class ReviewController:
                 WHERE r.user_id = ?
                 ORDER BY r.created_at DESC
             ''', (user_id,))
+            reviews = cursor.fetchall()
+
+        return [{
+            'id': review['id'],
+            'movie_title': review['movie_title'],
+            'movie_poster': review['movie_poster'],
+            'imdb_id': review['movie_id'],
+            'review_text': review['review_text'],
+            'rating': review['rating'],
+            'created_at': review['created_at']
+        } for review in reviews]
+
+    def get_user_reviews_with_movies_paginated(self, user_id, limit: int, offset: int):
+        """Same as get_user_reviews_with_movies but with LIMIT/OFFSET for pagination."""
+        with connect(self.db) as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT r.*, m.title as movie_title, m.poster as movie_poster, m.imdb_id
+                FROM reviews r
+                JOIN movies m ON r.movie_id = m.imdb_id
+                WHERE r.user_id = ?
+                ORDER BY r.created_at DESC
+                LIMIT ? OFFSET ?
+            ''', (user_id, limit, offset))
             reviews = cursor.fetchall()
 
         return [{

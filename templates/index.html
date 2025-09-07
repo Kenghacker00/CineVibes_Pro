@@ -21,61 +21,156 @@
     <!-- Featured Movies Section -->
     <section class="featured-movies mb-5">
         <h2 class="section-title text-center mb-4 text-white"><i class="fas fa-star"></i> Películas Destacadas</h2>
-        <div class="row">
-            <!-- Movie Card Template -->
+    <div class="row" id="movies-list" data-current-page="{{ current_page }}" data-total-pages="{{ total_pages }}">
             {% for movie in movies %}
             <div class="col-12 col-sm-6 col-md-4 mb-4">
                 <div class="movie-card glass-effect animate__animated animate__fadeIn led-effect">
                     <img loading="lazy" src="{{ movie.poster }}" alt="{{ movie.title }} Poster" class="movie-poster img-fluid">
                     <div class="movie-info p-3 bg-dark text-white rounded d-flex flex-column">
                         <h3 class="movie-title">{{ movie.title }}</h3>
-                <div class="movie-meta mb-2">
-                    <span><i class="fas fa-calendar"></i> {{ movie.year }}</span>
-                    <span><i class="fas fa-film"></i> {{ movie.director }}</span>
+                        <div class="movie-meta mb-2">
+                            <span><i class="fas fa-calendar"></i> {{ movie.year }}</span>
+                            <span><i class="fas fa-film"></i> {{ movie.director }}</span>
+                        </div>
+                        <div class="movie-description flex-grow-1">
+                            {{ movie.plot }}
+                        </div>
+                        <a href="{{ url_for('movie_player', movie_id=movie.imdb_id) }}" class="btn btn-danger btn-watch mt-2 btn-hover led-effect">
+                            <i class="fas fa-play"></i> Ver Película
+                        </a>
+                    </div>
                 </div>
-                    <div class="movie-description flex-grow-1">
-                    {{ movie.plot }}
-                </div>
-                <a href="{{ url_for('movie_player', movie_id=movie.imdb_id) }}" class="btn btn-danger btn-watch mt-2 btn-hover led-effect">
-                <i class="fas fa-play"></i> Ver Película
-            </a>
-        </div>
-    </div>
-</div>
-{% endfor %}
+            </div>
+            {% endfor %}
         </div>
     </section>
 
-    <!-- Paginación -->
-    <div class="pagination">
-        {% if current_page > 1 %}
-            <a href="{{ url_for('index', page=current_page - 1) }}" class="btn btn-danger led-effect">Anterior</a>
-        {% endif %}
-        {% for page in range(1, total_pages + 1) %}
-            <a href="{{ url_for('index', page=page) }}" class="btn btn-secondary {% if page == current_page %}active{% endif %}">{{ page }}</a>
-        {% endfor %}
-        {% if current_page < total_pages %}
-            <a href="{{ url_for('index', page=current_page + 1) }}" class="btn btn-danger led-effect">Siguiente</a>
-        {% endif %}
-    </div>
+        <!-- Infinite scroll sentinel + mobile fallback -->
+        <div id="scroll-sentinel" class="my-3" aria-hidden="true"></div>
+        <div class="d-grid d-md-none mt-2">
+            <button id="load-more" class="btn btn-danger led-effect" type="button" aria-label="Cargar más películas" style="display:none">Cargar más</button>
+        </div>
 </div>
 
 {% block extra_js %}
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const movieCards = document.querySelectorAll('.movie-card');
+        document.addEventListener('DOMContentLoaded', function() {
+    // Remove exaggerated lift animations on hover (no JS scaling)
 
-        movieCards.forEach(card => {
-            card.addEventListener('mouseenter', () => {
-                card.classList.add('shadow-lg');
-                card.style.transform = 'scale(1.05)';
-            });
+                        // Infinite scroll using /api/movies with mobile fallback
+                        const list = document.getElementById('movies-list');
+                        const sentinel = document.getElementById('scroll-sentinel');
+                        const btnMore = document.getElementById('load-more');
+                const PER_PAGE = 6;
+                let currentPage = parseInt((list?.dataset.currentPage)||'1', 10);
+                let totalPages = parseInt((list?.dataset.totalPages)||'1', 10);
+                        let isLoading = false;
 
-            card.addEventListener('mouseleave', () => {
-                card.classList.remove('shadow-lg');
-                card.style.transform = 'scale(1)';
-            });
-        });
+                // Persist/restore state across navigation
+                const STATE_KEY = 'indexStateV1';
+                function saveIndexState(){
+                    try {
+                        sessionStorage.setItem(STATE_KEY, JSON.stringify({
+                            page: currentPage,
+                            total: totalPages,
+                            y: window.scrollY,
+                            t: Date.now()
+                        }));
+                    } catch {}
+                }
+                function readIndexState(){
+                    try {
+                        const raw = sessionStorage.getItem(STATE_KEY);
+                        if (!raw) return null;
+                        const obj = JSON.parse(raw);
+                        return (obj && typeof obj.page === 'number') ? obj : null;
+                    } catch { return null; }
+                }
+
+                        function appendCards(items){
+                                if (!list) return;
+                                for (const m of (items||[])){
+                                        const col = document.createElement('div');
+                                        col.className = 'col-12 col-sm-6 col-md-4 mb-4';
+                                        col.innerHTML = `
+                                            <div class="movie-card glass-effect animate__animated animate__fadeIn led-effect">
+                                                <img loading="lazy" src="${m.poster || ''}" alt="${m.title || ''} Poster" class="movie-poster img-fluid">
+                                                <div class="movie-info p-3 bg-dark text-white rounded d-flex flex-column">
+                                                    <h3 class="movie-title">${m.title || ''}</h3>
+                                                    <div class="movie-meta mb-2">
+                                                        <span><i class="fas fa-calendar"></i> ${m.year || ''}</span>
+                                                        <span><i class="fas fa-film"></i> ${m.director || ''}</span>
+                                                    </div>
+                                                    <div class="movie-description flex-grow-1">${m.plot || ''}</div>
+                                                    <a href="/movie/player/${m.imdb_id}" class="btn btn-danger btn-watch mt-2 btn-hover led-effect">
+                                                        <i class="fas fa-play"></i> Ver Película
+                                                    </a>
+                                                </div>
+                                            </div>`;
+                                        list.appendChild(col);
+                                }
+                        }
+
+                        async function loadNext(){
+                                if (isLoading) return; if (currentPage >= totalPages) return;
+                                isLoading = true;
+                                try {
+                                        const nextPage = currentPage + 1;
+                                        const r = await fetch(`/api/movies?page=${nextPage}&per_page=${PER_PAGE}`, { headers: { 'Accept':'application/json' } });
+                                        if (!r.ok) return;
+                                        const data = await r.json();
+                                        appendCards(data.items||[]);
+                                        currentPage = Number(data.page||nextPage);
+                                        totalPages = Math.max(Math.ceil(Number(data.total||0) / Number(data.per_page||PER_PAGE)), 1);
+                                        if (btnMore) btnMore.style.display = (currentPage < totalPages ? 'block' : 'none');
+                                } finally {
+                                        isLoading = false;
+                                }
+                        }
+
+                        function setupInfinite(){
+                                if (!('IntersectionObserver' in window) || !sentinel) {
+                                        if (btnMore) btnMore.style.display = (currentPage < totalPages ? 'block' : 'none');
+                                        return;
+                                }
+                                const io = new IntersectionObserver((entries)=>{
+                                        const entry = entries[0];
+                                        if (entry.isIntersecting && !isLoading && currentPage < totalPages) {
+                                                loadNext();
+                                        }
+                                }, { root: null, rootMargin: '200px', threshold: 0 });
+                                io.observe(sentinel);
+                        }
+
+                        if (btnMore) btnMore.addEventListener('click', loadNext);
+
+                        // Save state on leaving and when tapping play
+                        window.addEventListener('beforeunload', saveIndexState);
+                        if (list) {
+                            list.addEventListener('click', (e)=>{
+                                const a = e.target.closest('a.btn-watch');
+                                if (a) saveIndexState();
+                            });
+                        }
+
+                        // Try restore: fetch pages up to saved.page and scroll to saved.y
+                        async function restoreIfSaved(){
+                            const st = readIndexState();
+                            if (!st) return;
+                            // If total changed drastically, still try to restore page within bounds
+                            const target = Math.max(1, Math.min(st.page, totalPages));
+                            if (target <= currentPage && (st.y||0) <= 0) return;
+                            while (currentPage < target) {
+                                await loadNext();
+                            }
+                            if ((st.y||0) > 0) {
+                                window.scrollTo({ top: st.y, behavior: 'instant' in window ? 'instant' : 'auto' });
+                            }
+                            // Optional: clear once restored
+                            try { sessionStorage.removeItem(STATE_KEY); } catch {}
+                        }
+
+                        restoreIfSaved().finally(setupInfinite);
     });
 </script>
 {% endblock %}
@@ -138,6 +233,7 @@
     .movie-card:hover {
         border: 2px solid #ff0000;
         box-shadow: 0 0 20px rgba(255, 0, 0, 1);
+        transform: none;
     }
 
     .movie-poster {
@@ -171,7 +267,7 @@
 
     .btn-danger:hover {
         background-color: #cc0000;
-        transform: scale(1.05);
+        transform: none;
     }
 
     .led-effect {
@@ -200,6 +296,10 @@
         .movie-poster {
             max-height: 200px;
         }
+        .movie-description {
+            display: -webkit-box; -webkit-line-clamp: 4; line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;
+        }
+        .btn-watch { width: 100%; text-align: center; }
     }
 </style>
 {% endblock %}

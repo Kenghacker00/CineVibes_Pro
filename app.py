@@ -52,6 +52,60 @@ def inject_current_year():
     from datetime import datetime as _dt
     return {"current_year": _dt.now().year}
 
+# Exponer helper para construir URL de foto de perfil con fallback seguro
+@app.context_processor
+def profile_src_helper():
+    def profile_src(path: str | None):
+        default_url = url_for('static', filename='images/default_profile.png')
+        if not path:
+            return default_url
+        # URL absoluta (p.ej., CDN)
+        try:
+            if isinstance(path, str) and path.startswith('http'):
+                return path
+        except Exception:
+            return default_url
+        # Ruta relativa dentro de static
+        safe_rel = path.replace('\\', '/').lstrip('/')
+        abs_candidate = os.path.abspath(os.path.join(app.root_path, 'static', safe_rel))
+        if os.path.isfile(abs_candidate):
+            return url_for('static', filename=safe_rel)
+        return default_url
+
+    return dict(profile_src=profile_src)
+
+# Exponer helper para verificar si es el admin por correo
+@app.context_processor
+def admin_flag_helper():
+    from config import Config as _Cfg
+    ADMIN_EMAIL = getattr(_Cfg, 'ADMIN_EMAIL', '')
+
+    def is_admin_user(user):
+        if not user:
+            return False
+        email = None
+        try:
+            if isinstance(user, dict):
+                email = user.get('email')
+            elif hasattr(user, 'get') and callable(getattr(user, 'get')):
+                # sqlite3.Row supports mapping-style access but may lack attribute
+                try:
+                    email = user.get('email', None)
+                except Exception:
+                    email = None
+            if email is None and hasattr(user, 'email'):
+                email = getattr(user, 'email', None)
+            if email is None:
+                try:
+                    email = user['email']  # mapping-style (sqlite3.Row)
+                except Exception:
+                    pass
+        except Exception:
+            email = None
+        return email == ADMIN_EMAIL
+
+    return dict(is_admin_user=is_admin_user, ADMIN_EMAIL=ADMIN_EMAIL)
+
 # -------------------------
 # Controllers
 # -------------------------
@@ -115,6 +169,311 @@ def close_connection(exception):
         except Exception:
             pass
 
+# --- Admin-only: Añadir película ---
+def _require_admin():
+    from config import Config as _Cfg
+    admin_email = getattr(_Cfg, 'ADMIN_EMAIL', '')
+    user = getattr(g, 'user', None)
+    # robust email extraction
+    email = None
+    if user:
+        try:
+            if isinstance(user, dict):
+                email = user.get('email')
+            elif hasattr(user, 'get'):
+                try:
+                    email = user.get('email', None)
+                except Exception:
+                    email = None
+            if email is None and hasattr(user, 'email'):
+                email = getattr(user, 'email', None)
+            if email is None:
+                try:
+                    email = user['email']
+                except Exception:
+                    pass
+        except Exception:
+            email = None
+    if not user or email != admin_email:
+        abort(403)
+    return user
+
+@app.route('/admin/add-movie', methods=['GET'])
+def add_movie_form():
+    _require_admin()
+    return render_template('add_movie.html', user=g.user)
+
+@app.route('/admin/add-movie', methods=['POST'])
+def add_movie():
+    _require_admin()
+    imdb_id = (request.form.get('imdb_id') or '').strip()
+    raw_video = (request.form.get('video_link') or '').strip()
+    video_link = raw_video if raw_video else None
+    available = 1 if request.form.get('available') else 0
+
+    if not imdb_id or not imdb_id.startswith('tt'):
+        flash('Proporciona un IMDb ID válido (formato tt1234567).', 'error')
+        return redirect(url_for('add_movie_form'))
+
+    ok, err = movie_controller.add_movie_by_imdb(imdb_id, available=available, video_link=video_link)
+    if not ok:
+        flash(f'No se pudo obtener/guardar la película: {err}', 'error')
+        return redirect(url_for('add_movie_form'))
+
+    # invalidar algunas cachés simples si existen
+    try:
+        cache.delete_memoized(load_user_profile_cached)
+    except Exception:
+        pass
+
+    flash('Película añadida/actualizada correctamente.', 'success')
+    return redirect(url_for('index', page=1))
+
+# --- Admin dashboard ---
+@app.route('/admin', methods=['GET'])
+def admin_dashboard():
+    _require_admin()
+    PER_PAGE = 5
+    mpage = max(int(request.args.get('mpage', 1) or 1), 1)
+    upage = max(int(request.args.get('upage', 1) or 1), 1)
+    moffset = (mpage - 1) * PER_PAGE
+    uoffset = (upage - 1) * PER_PAGE
+
+    with connect(None) as conn:
+        cur = conn.cursor()
+        # Movies count and page
+        cur.execute('SELECT COUNT(*) FROM movies')
+        mcount_row = cur.fetchone()
+        if isinstance(mcount_row, (tuple, list)):
+            mtotal = int(mcount_row[0])
+        else:
+            mtotal = int(next(iter(mcount_row.values())))
+        cur.execute('SELECT imdb_id, title, year, available FROM movies ORDER BY title ASC LIMIT ? OFFSET ?', (PER_PAGE, moffset))
+        movies = cur.fetchall()
+        # Users count and page
+        cur.execute('SELECT COUNT(*) FROM users')
+        ucount_row = cur.fetchone()
+        if isinstance(ucount_row, (tuple, list)):
+            utotal = int(ucount_row[0])
+        else:
+            utotal = int(next(iter(ucount_row.values())))
+        cur.execute('SELECT id, nickname, email FROM users ORDER BY created_at DESC LIMIT ? OFFSET ?', (PER_PAGE, uoffset))
+        users = cur.fetchall()
+
+    # normalize
+    norm_movies = []
+    for r in movies:
+        if isinstance(r, (tuple, list)):
+            norm_movies.append({'imdb_id': r[0], 'title': r[1], 'year': r[2], 'available': r[3]})
+        else:
+            norm_movies.append(r)
+    norm_users = []
+    for r in users:
+        if isinstance(r, (tuple, list)):
+            norm_users.append({'id': r[0], 'nickname': r[1], 'email': r[2]})
+        else:
+            norm_users.append(r)
+
+    from math import ceil
+    mpages = max(ceil(mtotal / PER_PAGE), 1)
+    upages = max(ceil(utotal / PER_PAGE), 1)
+    return render_template('admin_dashboard.html', user=g.user,
+                           movies=norm_movies, users=norm_users,
+                           mpage=mpage, mpages=mpages, mtotal=mtotal,
+                           upage=upage, upages=upages, utotal=utotal)
+
+@app.route('/admin/movies/<imdb_id>/delete', methods=['POST'])
+def admin_delete_movie(imdb_id):
+    _require_admin()
+    with connect(None) as conn:
+        cur = conn.cursor()
+        cur.execute('DELETE FROM movies WHERE imdb_id = ?', (imdb_id,))
+        conn.commit()
+    flash('Película eliminada.', 'success')
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin/movies/<imdb_id>/edit', methods=['GET','POST'])
+def admin_edit_movie(imdb_id):
+    _require_admin()
+    with connect(None) as conn:
+        cur = conn.cursor()
+        if request.method == 'POST':
+            # Sanitize helpers
+            def none_if_na(v):
+                if v is None:
+                    return None
+                if isinstance(v, str) and v.strip().upper() in ('', 'N/A'):
+                    return None
+                return v
+            def to_int_or_none(v):
+                v = none_if_na(v)
+                try:
+                    if v is None: return None
+                    return int(str(v).strip().split('–')[0])
+                except Exception:
+                    return None
+            def to_float_or_none(v):
+                v = none_if_na(v)
+                try:
+                    if v is None: return None
+                    return float(v)
+                except Exception:
+                    return None
+
+            new_imdb_id = (request.form.get('imdb_id') or '').strip() or None
+            title = none_if_na(request.form.get('title'))
+            year = to_int_or_none(request.form.get('year'))
+            poster = none_if_na(request.form.get('poster'))
+            plot = none_if_na(request.form.get('plot'))
+            director = none_if_na(request.form.get('director'))
+            actors = none_if_na(request.form.get('actors'))
+            genres = none_if_na(request.form.get('genres'))
+            imdb_rating = to_float_or_none(request.form.get('imdb_rating'))
+            release_date = none_if_na(request.form.get('release_date'))
+            runtime = none_if_na(request.form.get('runtime'))
+            language = none_if_na(request.form.get('language'))
+            country = none_if_na(request.form.get('country'))
+            awards = none_if_na(request.form.get('awards'))
+            available = 1 if request.form.get('available') else 0
+            raw_video = (request.form.get('video_link') or '').strip()
+            video_link = raw_video if raw_video else None
+
+            # Update all fields, possibly changing imdb_id
+            try:
+                cur.execute(
+                    '''UPDATE movies SET
+                        imdb_id = ?, title = ?, year = ?, poster = ?, plot = ?, director = ?, actors = ?, genres = ?,
+                        imdb_rating = ?, release_date = ?, runtime = ?, language = ?, country = ?, awards = ?,
+                        available = ?, video_link = ?
+                      WHERE imdb_id = ?''',
+                    (
+                        new_imdb_id or imdb_id, title, year, poster, plot, director, actors, genres,
+                        imdb_rating, release_date, runtime, language, country, awards,
+                        available, video_link, imdb_id
+                    )
+                )
+            except Exception as e:
+                flash(f'Error actualizando película: {e}', 'error')
+                return redirect(url_for('admin_edit_movie', imdb_id=imdb_id))
+
+            # If imdb_id changed, cascade to reviews.movie_id
+            if new_imdb_id and new_imdb_id != imdb_id:
+                try:
+                    cur.execute('UPDATE reviews SET movie_id = ? WHERE movie_id = ?', (new_imdb_id, imdb_id))
+                except Exception:
+                    pass
+            conn.commit()
+            flash('Película actualizada.', 'success')
+            return redirect(url_for('admin_dashboard'))
+
+        # GET current movie full data
+        cur.execute('''SELECT imdb_id, title, year, poster, plot, director, actors, genres, imdb_rating,
+                              release_date, runtime, language, country, awards, available, video_link
+                       FROM movies WHERE imdb_id = ?''', (imdb_id,))
+        row = cur.fetchone()
+    if not row:
+        abort(404)
+    if hasattr(row, 'keys'):
+        movie = dict(row)
+    else:
+        movie = {
+            'imdb_id': row[0], 'title': row[1], 'year': row[2], 'poster': row[3], 'plot': row[4], 'director': row[5],
+            'actors': row[6], 'genres': row[7], 'imdb_rating': row[8], 'release_date': row[9], 'runtime': row[10],
+            'language': row[11], 'country': row[12], 'awards': row[13], 'available': row[14], 'video_link': row[15]
+        }
+    return render_template('admin_edit_movie.html', user=g.user, movie=movie)
+
+@app.get('/admin/api/movies')
+def admin_api_movies():
+    _require_admin()
+    q = (request.args.get('q') or '').strip().lower()
+    page = max(int(request.args.get('page', 1) or 1), 1)
+    per_page = max(int(request.args.get('per_page', 5) or 5), 1)
+    offset = (page - 1) * per_page
+    like = f"%{q}%"
+    with connect(None) as conn:
+        cur = conn.cursor()
+        if q:
+            cur.execute('SELECT COUNT(*) FROM movies WHERE LOWER(title) LIKE ? OR LOWER(imdb_id) LIKE ?', (like, like))
+            total_row = cur.fetchone()
+            total = int(total_row[0] if isinstance(total_row, (tuple, list)) else next(iter(total_row.values())))
+            cur.execute('''SELECT imdb_id, title, year, available FROM movies
+                           WHERE LOWER(title) LIKE ? OR LOWER(imdb_id) LIKE ?
+                           ORDER BY title ASC LIMIT ? OFFSET ?''', (like, like, per_page, offset))
+        else:
+            cur.execute('SELECT COUNT(*) FROM movies')
+            total_row = cur.fetchone()
+            total = int(total_row[0] if isinstance(total_row, (tuple, list)) else next(iter(total_row.values())))
+            cur.execute('SELECT imdb_id, title, year, available FROM movies ORDER BY title ASC LIMIT ? OFFSET ?', (per_page, offset))
+        rows = cur.fetchall()
+    items = []
+    for r in rows:
+        if isinstance(r, (tuple, list)):
+            items.append({'imdb_id': r[0], 'title': r[1], 'year': r[2], 'available': bool(r[3])})
+        else:
+            items.append({'imdb_id': r.get('imdb_id'), 'title': r.get('title'), 'year': r.get('year'), 'available': bool(r.get('available'))})
+    return jsonify({ 'items': items, 'total': total, 'page': page, 'per_page': per_page })
+
+@app.get('/admin/api/users')
+def admin_api_users():
+    _require_admin()
+    q = (request.args.get('q') or '').strip().lower()
+    page = max(int(request.args.get('page', 1) or 1), 1)
+    per_page = max(int(request.args.get('per_page', 5) or 5), 1)
+    offset = (page - 1) * per_page
+    like = f"%{q}%"
+    with connect(None) as conn:
+        cur = conn.cursor()
+        if q:
+            cur.execute('SELECT COUNT(*) FROM users WHERE LOWER(nickname) LIKE ? OR LOWER(email) LIKE ?', (like, like))
+            total_row = cur.fetchone()
+            total = int(total_row[0] if isinstance(total_row, (tuple, list)) else next(iter(total_row.values())))
+            cur.execute('''SELECT id, nickname, email FROM users
+                           WHERE LOWER(nickname) LIKE ? OR LOWER(email) LIKE ?
+                           ORDER BY created_at DESC LIMIT ? OFFSET ?''', (like, like, per_page, offset))
+        else:
+            cur.execute('SELECT COUNT(*) FROM users')
+            total_row = cur.fetchone()
+            total = int(total_row[0] if isinstance(total_row, (tuple, list)) else next(iter(total_row.values())))
+            cur.execute('SELECT id, nickname, email FROM users ORDER BY created_at DESC LIMIT ? OFFSET ?', (per_page, offset))
+        rows = cur.fetchall()
+    items = []
+    for r in rows:
+        if isinstance(r, (tuple, list)):
+            items.append({'id': r[0], 'nickname': r[1], 'email': r[2]})
+        else:
+            items.append({'id': r.get('id'), 'nickname': r.get('nickname'), 'email': r.get('email')})
+    return jsonify({ 'items': items, 'total': total, 'page': page, 'per_page': per_page })
+
+@app.route('/admin/users/<int:user_id>/delete', methods=['POST'])
+def admin_delete_user(user_id):
+    _require_admin()
+    with connect(None) as conn:
+        cur = conn.cursor()
+        cur.execute('DELETE FROM users WHERE id = ?', (user_id,))
+        conn.commit()
+    flash('Usuario eliminado.', 'success')
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin/users/<int:user_id>/edit', methods=['GET','POST'])
+def admin_edit_user(user_id):
+    _require_admin()
+    with connect(None) as conn:
+        cur = conn.cursor()
+        if request.method == 'POST':
+            nickname = (request.form.get('nickname') or '').strip()
+            email = (request.form.get('email') or '').strip()
+            cur.execute('UPDATE users SET nickname = ?, email = ? WHERE id = ?', (nickname or None, email or None, user_id))
+            conn.commit()
+            flash('Usuario actualizado.', 'success')
+            return redirect(url_for('admin_dashboard'))
+        cur.execute('SELECT id, nickname, email FROM users WHERE id = ?', (user_id,))
+        row = cur.fetchone()
+    if not row:
+        abort(404)
+    user_edit = row if hasattr(row, 'keys') else {'id': row[0], 'nickname': row[1], 'email': row[2]}
+    return render_template('admin_edit_user.html', user=g.user, user_edit=user_edit)
+
 # ---- Paginación cacheada (solo datos, no usuario) ----
 
 @cache.memoize(timeout=60)
@@ -136,6 +495,27 @@ def get_movies_page_cached(per_page: int, page: int):
     offset = (page - 1) * per_page
     rows = conn.execute(
         'SELECT * FROM movies ORDER BY release_date DESC LIMIT ? OFFSET ?',
+        (per_page, offset)
+    ).fetchall()
+    return rows
+
+@cache.memoize(timeout=60)
+def get_total_available_movies_cached():
+    conn = _get_conn()
+    row = conn.execute('SELECT COUNT(*) FROM movies WHERE available = 1').fetchone()
+    if isinstance(row, (tuple, list)):
+        return row[0]
+    try:
+        return next(iter(row.values()))
+    except Exception:
+        return 0
+
+@cache.memoize(timeout=60)
+def get_available_movies_page_cached(per_page: int, page: int):
+    conn = _get_conn()
+    offset = (page - 1) * per_page
+    rows = conn.execute(
+        'SELECT imdb_id, title, year, director, plot, poster FROM movies WHERE available = 1 ORDER BY release_date DESC LIMIT ? OFFSET ?',
         (per_page, offset)
     ).fetchall()
     return rows
@@ -175,6 +555,40 @@ def index():
         total_pages=total_pages,
         current_page=page
     )
+
+@app.get('/api/movies')
+def api_movies():
+    """Public API for paginated movies on index."""
+    try:
+        per_page = max(int(request.args.get('per_page', 6) or 6), 1)
+    except Exception:
+        per_page = 6
+    try:
+        page = max(int(request.args.get('page', 1) or 1), 1)
+    except Exception:
+        page = 1
+    try:
+        total = int(get_total_movies_cached() or 0)
+        rows = get_movies_page_cached(per_page, page) or []
+    except Exception:
+        total, rows = 0, []
+    items = []
+    for r in rows:
+        # Support sqlite3.Row or dict-like
+        if isinstance(r, (tuple, list)):
+            # Fallback if '*' order changes; safest is to map via indices only if needed.
+            # Here we skip tuple support to avoid incorrect mapping in unknown schemas.
+            continue
+        getter = (r.get if hasattr(r, 'get') else (lambda k: r[k]))
+        items.append({
+            'imdb_id': getter('imdb_id'),
+            'title': getter('title'),
+            'year': getter('year'),
+            'director': getter('director'),
+            'plot': getter('plot'),
+            'poster': getter('poster'),
+        })
+    return jsonify({'items': items, 'total': total, 'page': page, 'per_page': per_page})
 
 @app.route('/edit_profile', methods=['GET', 'POST'])
 def edit_profile():
@@ -238,8 +652,13 @@ def profile():
         return redirect(url_for('login'))
 
     form = ProfileForm()
-    reviews = review_controller.get_user_reviews_with_movies(user['id'])
     review_count = review_controller.get_user_review_count(user['id'])
+    RPP = 4
+    page = max(int(request.args.get('page', 1) or 1), 1)
+    offset = (page - 1) * RPP
+    reviews = review_controller.get_user_reviews_with_movies_paginated(user['id'], RPP, offset)
+    from math import ceil
+    pages = max(ceil((review_count or 0) / RPP), 1)
 
     if form.validate_on_submit() and form.profile_pic.data:
         file = form.profile_pic.data
@@ -294,7 +713,26 @@ def profile():
         flash('Foto de perfil actualizada con éxito', 'success')
         return redirect(url_for('profile', _=int(time.time())))
 
-    return render_template('profile.html', user=user, reviews=reviews, form=form, review_count=review_count)
+    return render_template('profile.html', user=user, reviews=reviews, form=form, review_count=review_count, page=page, pages=pages)
+
+@app.get('/api/my-reviews')
+def api_my_reviews():
+    """Return current user's reviews as JSON with pagination."""
+    user = g.user
+    if not user:
+        return jsonify({'error': 'Unauthorized'}), 401
+    try:
+        page = max(int(request.args.get('page', 1) or 1), 1)
+    except Exception:
+        page = 1
+    try:
+        per_page = max(int(request.args.get('per_page', 5) or 5), 1)
+    except Exception:
+        per_page = 5
+    offset = (page - 1) * per_page
+    items = review_controller.get_user_reviews_with_movies_paginated(user['id'], per_page, offset)
+    total = review_controller.get_user_review_count(user['id']) or 0
+    return jsonify({'items': items, 'total': int(total), 'page': page, 'per_page': per_page})
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -414,12 +852,19 @@ def movie_player(movie_id):
 @app.route('/movie/<string:movie_id>/review', methods=['POST'])
 def add_review(movie_id):
     if 'user_id' not in session:
+        if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': False, 'message': 'Debes iniciar sesión.'}), 401
         flash('Debes iniciar sesión para dejar un comentario.', 'error')
         return redirect(url_for('login'))
 
     content = request.form['content']
     rating = request.form['rating']
     review_controller.add_review(session['user_id'], movie_id, content, rating)
+    # If XHR, return the latest review rendered as HTML to insert dynamically
+    if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        latest = review_controller.get_latest_user_review_for_movie(session['user_id'], movie_id)
+        html = render_template('_partials/review_item.html', review=latest, user=g.user)
+        return jsonify({'success': True, 'html': html})
     flash('Tu comentario ha sido añadido.', 'success')
     return redirect(url_for('movie_player', movie_id=movie_id))
 
@@ -431,7 +876,29 @@ def update_review(review_id):
     content = request.form.get('content')
     rating = request.form.get('rating')
     result = review_controller.update_review(review_id, session['user_id'], content, rating)
-    return (jsonify(result), 200) if result['success'] else (jsonify(result), 400)
+    if result.get('success'):
+        # return updated HTML snippet for the review
+        # Fetch fresh data to re-render
+        with connect(None) as conn:
+            cur = conn.cursor()
+            cur.execute('''SELECT r.*, u.nickname as user_nickname, u.profile_pic as user_profile_pic
+                           FROM reviews r JOIN users u ON r.user_id = u.id WHERE r.id = ?''', (review_id,))
+            row = cur.fetchone()
+            review = None
+            if row:
+                if hasattr(row, 'get'):
+                    review = row
+                else:
+                    try:
+                        review = dict(row)
+                    except Exception:
+                        # Fallback using cursor description
+                        cols = [d[0] for d in cur.description]
+                        review = {cols[i]: row[i] for i in range(len(cols))}
+        if review:
+            html = render_template('_partials/review_item.html', review=review, user=g.user)
+            return jsonify({'success': True, 'html': html})
+    return (jsonify(result), 400)
 
 @app.route('/review/<int:review_id>', methods=['DELETE'])
 def delete_review(review_id):
@@ -439,14 +906,8 @@ def delete_review(review_id):
         return jsonify({'success': False, 'message': 'Debes iniciar sesión para eliminar un comentario.'}), 401
 
     result = review_controller.delete_review(review_id, session['user_id'])
-    return (jsonify(result), 200) if result['success'] else (jsonify(result), 400)
+    return (jsonify({'success': True}), 200) if result.get('success') else (jsonify({'success': False, 'message': result.get('message')}), 400)
 
-@app.route('/ver_peliculas', methods=['GET'])
-def ver_peliculas():
-    user = g.user
-    # Esta lista puede venir de DB; si quisieras cachear, hazlo dentro del controller con una ventana corta
-    available_movies = movie_controller.get_available_movies()
-    return render_template('ver_peliculas.html', movies=available_movies, user=user)
 
 @app.route('/search', methods=['GET'])
 def search():

@@ -51,7 +51,7 @@
 
     <div class="comments-section p-4 rounded shadow mb-4">
         <h3>Comentarios</h3>
-        <form id="comment-form" method="POST" action="{{ url_for('add_review', movie_id=movie.imdb_id) }}">
+    <form id="comment-form" method="POST" action="{{ url_for('add_review', movie_id=movie.imdb_id) }}">
             <div class="form-group">
                 <textarea class="form-control" name="content" rows="3" placeholder="Escribe tu comentario aquí..." required></textarea>
             </div>
@@ -119,7 +119,7 @@
     }
 
     .movie-player:hover, .movie-info:hover, .comments-section:hover {
-        transform: scale(1.02);
+        transform: none;
         box-shadow: 0 4px 20px rgba(255, 0, 0, 0.5);
     }
 
@@ -195,7 +195,7 @@
     }
 
     .comment:hover {
-        transform: translateY(-5px);
+        transform: none;
         box-shadow: 0 5px 15px rgba(255, 0, 0, 0.2);
     }
 
@@ -219,90 +219,116 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Edit review
-    document.querySelectorAll('.edit-review').forEach(button => {
-        button.addEventListener('click', function() {
-            const reviewId = this.getAttribute('data-review-id');
-            const reviewElement = document.getElementById(`review-${reviewId}`);
-            const reviewText = reviewElement.querySelector('.review-text').textContent;
-            const rating = reviewElement.querySelectorAll('.fa-star').length;
-
-            const formHtml = `
-                <form class="edit-review-form" data-review-id="${reviewId}">
-                    <textarea class="form-control mb-2" name="content" rows="3" required>${reviewText}</textarea>
-                    <div class="form-group">
-                        <label for="rating">Calificación:</label>
-                        <div class="star-rating">
-                            <input type="radio" id="star5-edit-${reviewId}" name="rating" value="5" ${rating === 5 ? 'checked' : ''} required /><label for="star5-edit-${reviewId}"></label>
-                            <input type="radio" id="star4-edit-${reviewId}" name="rating" value="4" ${rating === 4 ? 'checked' : ''} /><label for="star4-edit-${reviewId}"></label>
-                            <input type="radio" id="star3-edit-${reviewId}" name="rating" value="3" ${rating === 3 ? 'checked' : ''} /><label for="star3-edit-${reviewId}"></label>
-                            <input type="radio" id="star2-edit-${reviewId}" name="rating" value="2" ${rating === 2 ? 'checked' : ''} /><label for="star2-edit-${reviewId}"></label>
-                            <input type="radio" id="star1-edit-${reviewId}" name="rating" value="1" ${rating === 1 ? 'checked' : ''} /><label for="star1-edit-${reviewId}"></label>
-                        </div>
-                    </div>
-                    <button type="submit" class="btn btn-primary">Guardar</button>
-                    <button type="button" class="btn btn-secondary cancel-edit">Cancelar</button>
-                </form>
-            `;
-
-            reviewElement.innerHTML = formHtml;
-        });
-    });
-
-    // Delete review
-    document.querySelectorAll('.delete-review').forEach(button => {
-        button.addEventListener('click', function() {
-            if (confirm('¿Estás seguro de que quieres eliminar este comentario?')) {
-                const reviewId = this.getAttribute('data-review-id');
-                fetch(`/review/${reviewId}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'Content-Type': 'application/json'
-                    }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        document.getElementById(`review-${reviewId}`).remove();
-                    } else {
-                        alert('Error al eliminar el comentario');
-                    }
+        // Handle add review (AJAX)
+        const commentForm = document.getElementById('comment-form');
+        if (commentForm) {
+            commentForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const formData = new FormData(commentForm);
+                const res = await fetch(commentForm.action, {
+                    method: 'POST',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    body: formData
                 });
-            }
-        });
-    });
+                if (!res.ok) return alert('Error al enviar el comentario');
+                const data = await res.json();
+                if (!data.success) return alert(data.message || 'Error');
+                const list = document.querySelector('.comments-list');
+                if (list && data.html) {
+                    list.insertAdjacentHTML('afterbegin', data.html);
+                    commentForm.reset();
+                    attachRowHandlers(list.firstElementChild);
+                }
+            });
+        }
+
+    // Edit/Delete listeners are bound via attachRowHandlers()
 
     // Handle edit form submission
-    document.addEventListener('submit', function(e) {
+    document.addEventListener('submit', async function(e) {
         if (e.target.classList.contains('edit-review-form')) {
             e.preventDefault();
             const reviewId = e.target.getAttribute('data-review-id');
             const formData = new FormData(e.target);
-            fetch(`/review/${reviewId}`, {
+            const res = await fetch(`/review/${reviewId}`, {
                 method: 'PUT',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
                 body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    location.reload();  // Reload the page to show the updated review
-                } else {
-                    alert('Error al actualizar el comentario');
-                }
             });
+            const data = await res.json();
+            if (data.success && data.html) {
+                const el = document.getElementById(`review-${reviewId}`);
+                if (el) {
+                  el.outerHTML = data.html;
+                  const replaced = document.getElementById(`review-${reviewId}`);
+                  attachRowHandlers(replaced);
+                }
+            } else {
+                alert(data.message || 'Error al actualizar el comentario');
+            }
         }
     });
 
     // Handle cancel edit
-    document.addEventListener('click', function(e) {
+        document.addEventListener('click', function(e) {
         if (e.target.classList.contains('cancel-edit')) {
-            location.reload();  // Reload the page to cancel the edit
+                        const form = e.target.closest('.edit-review-form');
+                        if (!form) return;
+                        const id = form.getAttribute('data-review-id');
+                        const container = document.getElementById(`review-${id}`);
+                        if (container?.dataset.originalHtml) {
+                            container.innerHTML = container.dataset.originalHtml;
+                            delete container.dataset.originalHtml;
+                            attachRowHandlers(container);
+                        }
         }
     });
+
+        function attachRowHandlers(scope){
+            const root = scope||document;
+            root.querySelectorAll('.edit-review').forEach(btn=>{
+                if (!btn.dataset.bound) {
+                    btn.dataset.bound = '1';
+                    btn.addEventListener('click', function(){
+                        const reviewId = this.getAttribute('data-review-id');
+                        const reviewElement = document.getElementById(`review-${reviewId}`);
+                        const reviewText = reviewElement.querySelector('.review-text').textContent;
+                        const rating = reviewElement.querySelectorAll('i.fas.fa-star').length;
+                        const formHtml = `
+                            <form class="edit-review-form" data-review-id="${reviewId}">
+                                <textarea class="form-control mb-2" name="content" rows="3" required>${reviewText}</textarea>
+                                <div class="form-group">
+                                    <label for="rating">Calificación:</label>
+                                    <div class="star-rating">
+                                        <input type="radio" id="star5-edit-${reviewId}" name="rating" value="5" ${rating === 5 ? 'checked' : ''} required /><label for="star5-edit-${reviewId}"></label>
+                                        <input type="radio" id="star4-edit-${reviewId}" name="rating" value="4" ${rating === 4 ? 'checked' : ''} /><label for="star4-edit-${reviewId}"></label>
+                                        <input type="radio" id="star3-edit-${reviewId}" name="rating" value="3" ${rating === 3 ? 'checked' : ''} /><label for="star3-edit-${reviewId}"></label>
+                                        <input type="radio" id="star2-edit-${reviewId}" name="rating" value="2" ${rating === 2 ? 'checked' : ''} /><label for="star2-edit-${reviewId}"></label>
+                                        <input type="radio" id="star1-edit-${reviewId}" name="rating" value="1" ${rating === 1 ? 'checked' : ''} /><label for="star1-edit-${reviewId}"></label>
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Guardar</button>
+                                <button type="button" class="btn btn-secondary cancel-edit">Cancelar</button>
+                            </form>`;
+                        reviewElement.dataset.originalHtml = reviewElement.innerHTML;
+                        reviewElement.innerHTML = formHtml;
+                    });
+                }
+            });
+            root.querySelectorAll('.delete-review').forEach(btn=>{
+                if (!btn.dataset.bound) {
+                    btn.dataset.bound = '1';
+                    btn.addEventListener('click', function(){
+                        if (!confirm('¿Estás seguro de que quieres eliminar este comentario?')) return;
+                        const reviewId = this.getAttribute('data-review-id');
+                        fetch(`/review/${reviewId}`, { method: 'DELETE', headers: { 'X-Requested-With': 'XMLHttpRequest', 'Content-Type':'application/json' } })
+                            .then(r=>r.json()).then(data=>{ if (data.success) document.getElementById(`review-${reviewId}`)?.remove(); else alert('Error al eliminar'); });
+                    });
+                }
+            });
+        }
+        // Bind initial rows
+        attachRowHandlers();
 });
 </script>
 {% endblock %}

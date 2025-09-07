@@ -9,3 +9,4 @@ class Config:
     EMAIL_SENDER = os.getenv("EMAIL_SENDER", "")
     EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD", "")
     OMDB_API_KEY = os.getenv("OMDB_API_KEY", "")
+    ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "")

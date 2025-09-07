@@ -8,7 +8,7 @@
     <div class="col-md-4">
       <div class="profile-card glass-effect p-4 rounded">
         <div class="profile-header text-center">
-          <img loading="lazy" src="{{ user.profile_pic if (user.profile_pic and user.profile_pic.startswith('http')) else (url_for('static', filename=user.profile_pic) if user.profile_pic else url_for('static', filename='images/default_profile.png')) }}"
+          <img loading="lazy" src="{{ profile_src(user.profile_pic) }}"
                alt="Foto de perfil"
                class="profile-image animate__animated animate__fadeIn">
           <div class="profile-status">
@@ -25,6 +25,10 @@
           <p class="profile-reviews">
             <i class="fas fa-star"></i> {{ review_count }} reseña{% if review_count != 1 %}s{% endif %}
           </p>
+          {% set member_since = (user.get('created_at') if user and user.get else (user.created_at if user and user.created_at else '')) %}
+          {% if member_since %}
+          <p class="profile-member-since"><i class="fas fa-calendar-alt"></i> Miembro desde: {{ member_since }}</p>
+          {% endif %}
 
           <form action="{{ url_for('profile') }}" method="POST" enctype="multipart/form-data" class="mt-3">
             {{ form.hidden_tag() }}
@@ -44,9 +48,16 @@
 
 
 
-          <a href="{{ url_for('edit_profile') }}" class="btn btn-danger mt-3 led-effect">
-            <i class="fas fa-edit"></i> Editar Perfil
-          </a>
+          <div class="d-flex flex-wrap justify-content-center gap-2 mt-3">
+            <a href="{{ url_for('edit_profile') }}" class="btn btn-danger led-effect">
+              <i class="fas fa-edit"></i> Editar Perfil
+            </a>
+            {% if is_admin_user(user) %}
+            <a href="{{ url_for('add_movie_form') }}" class="btn btn-danger led-effect">
+              <i class="fas fa-plus-circle"></i> Añadir Película
+            </a>
+            {% endif %}
+          </div>
         </div>
       </div>
     </div>
@@ -57,7 +68,7 @@
           <i class="fas fa-star"></i> Mis Reseñas ({{ review_count }})
         </h3>
 
-        {% if reviews %}
+  {% if reviews %}
           <div class="reviews-list row">
             {% for review in reviews %}
               <div class="col-12 col-md-6 mb-4">
@@ -80,6 +91,17 @@
               </div>
             {% endfor %}
           </div>
+          <nav aria-label="Paginación reseñas" class="mt-2" id="reviews-pagination">
+            <ul class="pagination pagination-sm justify-content-center">
+              {% if pages and pages > 1 %}
+                <li class="page-item {% if page <= 1 %}disabled{% endif %}"><a class="page-link" href="{{ url_for('profile', page=page-1 if page>1 else 1) }}">«</a></li>
+                {% for p in range(1, pages+1) %}
+                  <li class="page-item {% if p == page %}active{% endif %}"><a class="page-link" href="{{ url_for('profile', page=p) }}">{{ p }}</a></li>
+                {% endfor %}
+                <li class="page-item {% if page >= pages %}disabled{% endif %}"><a class="page-link" href="{{ url_for('profile', page=page+1 if page<pages else pages) }}">»</a></li>
+              {% endif %}
+            </ul>
+          </nav>
         {% else %}
           <div class="no-reviews">
             <i class="fas fa-film fa-3x"></i>
@@ -99,21 +121,21 @@
 <style>
 body { background-color:#1a1a1a; color:#fff; }
 .glass-effect { background:rgba(255,0,0,.1); backdrop-filter:blur(10px); border-radius:15px; transition:.3s; border:2px solid #f00; }
-.glass-effect:hover { transform:scale(1.02); box-shadow:0 0 20px rgba(255,0,0,.5); }
+.glass-effect:hover { transform:none; box-shadow:0 0 20px rgba(255,0,0,.5); }
 .profile-image { width:150px; height:150px; object-fit:cover; border-radius:50%; border:3px solid #f00; box-shadow:0 0 20px rgba(255,0,0,.2); margin-bottom:20px; transition:.3s; }
-.profile-image:hover { transform:scale(1.05); }
+.profile-image:hover { transform:none; }
 .status-badge { display:inline-block; padding:5px 15px; border-radius:20px; font-size:.9rem; margin:10px 0; }
 .status-badge.verified { background:rgba(40,167,69,.2); color:#28a745; }
 .status-badge.unverified { background:rgba(220,53,69,.2); color:#dc3545; }
 .btn-upload { border:2px solid #fff; transition:.3s; }
 .btn-upload:hover { background:#fff; color:#f00; }
 .btn-danger { background:#f00; border:none; transition:.3s; }
-.btn-danger:hover { background:#c00; transform:scale(1.05); }
+.btn-danger:hover { background:#c00; transform:none; }
 .led-effect { box-shadow:0 0 10px #f00; transition:.3s; }
 .led-effect:hover { box-shadow:0 0 20px #f00, 0 0 40px #f00; }
 .section-title { color:#fff; margin-bottom:25px; border-bottom:2px solid #f00; padding-bottom:10px; }
 .review-card { background:rgba(255,0,0,.1); border-radius:10px; padding:20px; margin-bottom:20px; transition:.3s; }
-.review-card:hover { transform:translateY(-5px); box-shadow:0 5px 15px rgba(255,0,0,.2); }
+.review-card:hover { transform:none; box-shadow:0 5px 15px rgba(255,0,0,.2); }
 .review-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
 .movie-poster { width:50px; height:75px; object-fit:cover; border-radius:5px; margin-right:10px; box-shadow:0 2px 4px rgba(255,0,0,.1); }
 .rating { color:#ffd700; }
@@ -183,6 +205,87 @@ document.addEventListener('DOMContentLoaded', function () {
 
       form.submit(); // enviar UNA sola vez
     });
+  }
+  // Client-side pagination for reviews
+  const list = document.querySelector('.reviews-list');
+  const pager = document.getElementById('reviews-pagination');
+
+  function renderReviewCard(r){
+    const col = document.createElement('div');
+    col.className = 'col-12 col-md-6 mb-4';
+    col.innerHTML = `
+      <div class="review-card animate__animated animate__fadeIn h-100">
+        <div class="review-header">
+          <div class="d-flex align-items-center">
+            <img loading="lazy" src="${r.movie_poster || ''}" alt="${r.movie_title || ''}" class="movie-poster mr-3" style="width: 50px; height: auto;">
+            <h4><a href="/movie/player/${r.imdb_id}">${r.movie_title || ''}</a></h4>
+          </div>
+          <div class="rating">
+            ${'<i class="fas fa-star"></i>'.repeat(parseInt(r.rating||0))}
+            ${'<i class="far fa-star"></i>'.repeat(Math.max(0, 5 - parseInt(r.rating||0)))}
+          </div>
+        </div>
+        <p class="review-text">${(r.review_text||'')}</p>
+        <div class="review-footer">
+          <small class="review-date"><i class="far fa-clock"></i> ${r.created_at||''}</small>
+        </div>
+      </div>`;
+    return col;
+  }
+
+  function renderReviews(items){
+    if (!list) return;
+    list.innerHTML = '';
+    for (const r of (items||[])) list.appendChild(renderReviewCard(r));
+  }
+
+  function renderPager(page, pages, onClick){
+    if (!pager) return;
+    const ul = pager.querySelector('ul');
+    ul.innerHTML = '';
+    const add = (label, target, disabled=false, active=false)=>{
+      const li = document.createElement('li');
+      li.className = `page-item ${disabled?'disabled':''} ${active?'active':''}`.trim();
+      const a = document.createElement('a');
+      a.className = 'page-link';
+      a.href = '#';
+      a.textContent = label;
+      if (!disabled) a.addEventListener('click', (e)=>{ e.preventDefault(); onClick(target); });
+      li.appendChild(a);
+      ul.appendChild(li);
+    };
+    if (!pages || pages <= 1) return;
+    add('«', Math.max(1, page-1), page<=1, false);
+    for (let p=1; p<=pages; p++) add(String(p), p, false, p===page);
+    add('»', Math.min(pages, page+1), page>=pages, false);
+  }
+
+  async function loadReviews(page){
+    const r = await fetch(`/api/my-reviews?page=${page||1}&per_page=5`, { headers: { 'Accept':'application/json' } });
+    if (!r.ok) return;
+    const data = await r.json();
+    renderReviews(data.items||[]);
+    const total = Number(data.total||0); const perPage = Number(data.per_page||5);
+    const pages = Math.max(Math.ceil(total / perPage), 1);
+    renderPager(Number(data.page||1), pages, loadReviews);
+  }
+
+  if (list && pager) {
+    // Intercept initial server pager clicks for smooth client nav
+    pager.addEventListener('click', (e) => {
+      const a = e.target.closest('a.page-link');
+      if (!a) return;
+      e.preventDefault();
+      const txt = a.textContent?.trim();
+      const current = Number(document.querySelector('#reviews-pagination .page-item.active .page-link')?.textContent || 1);
+      if (txt === '«') return loadReviews(Math.max(1, current-1));
+      if (txt === '»') return loadReviews(current+1);
+      const n = parseInt(txt||'1',10);
+      return loadReviews(Number.isFinite(n)?n:1);
+    }, { once: true });
+    // Initial sync via API to reflect any new total/format
+    const initial = Number(document.querySelector('#reviews-pagination .page-item.active .page-link')?.textContent || 1);
+    loadReviews(initial || 1);
   }
 });
 </script>

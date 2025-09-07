@@ -179,3 +179,97 @@ class MovieController:
                 'director': r[6], 'actors': r[7], 'genres': r[8], 'imdb_rating': r[9], 'release_date': r[10],
                 'runtime': r[11], 'language': r[12], 'country': r[13], 'awards': r[14], 'available': r[15], 'video_link': r[16]
             } for r in rows]
+
+    # --- Admin: add movie by IMDb ID ---
+    def add_movie_from_omdb_data(self, data: dict, available: int = 1, video_link: str | None = None) -> bool:
+        """Insert or update a movie row using OMDb response payload."""
+        imdb_id = data.get('imdbID') or data.get('imdb_id')
+        if not imdb_id:
+            return False
+
+        # Map OMDb keys to our DB columns
+        def none_if_na(v):
+            if v is None:
+                return None
+            if isinstance(v, str) and v.strip().upper() == 'N/A':
+                return None
+            return v
+
+        def to_int_or_none(v):
+            v = none_if_na(v)
+            try:
+                if v is None:
+                    return None
+                # Some OMDb years can be like '2016–'
+                return int(str(v).strip().split('–')[0])
+            except Exception:
+                return None
+
+        def to_float_or_none(v):
+            v = none_if_na(v)
+            try:
+                if v is None:
+                    return None
+                return float(v)
+            except Exception:
+                return None
+
+        title = none_if_na(data.get('Title') or data.get('title'))
+        year = to_int_or_none(data.get('Year') or data.get('year'))
+        poster = none_if_na(data.get('Poster') or data.get('poster'))
+        plot = none_if_na(data.get('Plot') or data.get('plot'))
+        director = none_if_na(data.get('Director') or data.get('director'))
+        actors = none_if_na(data.get('Actors') or data.get('actors'))
+        genres = none_if_na(data.get('Genre') or data.get('genres'))
+        imdb_rating = to_float_or_none(data.get('imdbRating') or data.get('imdb_rating'))
+        release_date = none_if_na(data.get('Released') or data.get('release_date'))
+        runtime = data.get('Runtime') or data.get('runtime')
+        language = none_if_na(data.get('Language') or data.get('language'))
+        country = none_if_na(data.get('Country') or data.get('country'))
+        awards = none_if_na(data.get('Awards') or data.get('awards'))
+
+        with connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            # Check existence
+            cursor.execute('SELECT id FROM movies WHERE imdb_id = ?', (imdb_id,))
+            exists = cursor.fetchone() is not None
+
+            if exists:
+                cursor.execute(
+                    '''UPDATE movies SET
+                        title = ?, year = ?, poster = ?, plot = ?, director = ?, actors = ?, genres = ?,
+                        imdb_rating = ?, release_date = ?, runtime = ?, language = ?, country = ?, awards = ?,
+                        available = ?, video_link = ?
+                       WHERE imdb_id = ?''',
+                    (
+                        title, year, poster, plot, director, actors, genres,
+                        imdb_rating, release_date, runtime, language, country, awards,
+                        available, video_link, imdb_id
+                    )
+                )
+            else:
+                cursor.execute(
+                    '''INSERT INTO movies (
+                        imdb_id, title, year, poster, plot, director, actors, genres,
+                        imdb_rating, release_date, runtime, language, country, awards,
+                        available, video_link
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                    (
+                        imdb_id, title, year, poster, plot, director, actors, genres,
+                        imdb_rating, release_date, runtime, language, country, awards,
+                        available, video_link
+                    )
+                )
+            conn.commit()
+
+        # Invalidate cache of available IDs
+        self.available_movie_ids_cache = None
+        return True
+
+    def add_movie_by_imdb(self, imdb_id: str, available: int = 1, video_link: str | None = None):
+        """Fetch details from OMDb and insert/update into DB. Returns (ok, error_msg)."""
+        data = get_movie_details(imdb_id)
+        if not isinstance(data, dict) or data.get('Response') == 'False' or 'errorMessage' in data:
+            return False, data.get('Error') if isinstance(data, dict) else 'Error desconocido'
+        ok = self.add_movie_from_omdb_data(data, available=available, video_link=video_link)
+        return ok, None if ok else 'No se pudo guardar la película'

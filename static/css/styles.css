@@ -47,7 +47,7 @@ main {
 
 .nav-link:hover {
     color: var(--text-color) !important;
-    transform: scale(1.05); /* Efecto de escala al pasar el mouse */
+    transform: none;
 }
 
 /* Películas destacadas */
@@ -64,7 +64,7 @@ main {
 }
 
 .movie-card:hover {
-    transform: translateY(-5px); /* Efecto de elevación al pasar el mouse */
+    transform: none;
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
 }
 
@@ -107,7 +107,7 @@ main {
 
 .btn-primary:hover {
     background-color: var(--text-color);
-    transform: translateY(-2px); /* Efecto de elevación al pasar el mouse */
+    transform: none;
 }
 
 .btn-danger {

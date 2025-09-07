@@ -8,55 +8,46 @@
         <div class="col-md-4">
             <div class="profile-card glass-effect p-4 rounded">
                 <div class="profile-header text-center">
-                    <img loading="lazy" src="{{ user.get('profile_pic') if (user.get('profile_pic') and user.get('profile_pic').startswith('http')) else (url_for('static', filename=user.get('profile_pic')) if user.get('profile_pic') else url_for('static', filename='images/default_profile.png')) }}"
-                         alt="Foto de perfil de {{ user.get('nickname', 'Usuario') }}"
-                         class="profile-image animate__animated animate__fadeIn">
+                    <img loading="lazy" src="{{ profile_src(user.get('profile_pic')) }}"
+                             alt="Foto de perfil de {{ user.get('nickname', 'Usuario') }}"
+                             class="profile-image animate__animated animate__fadeIn">
                 </div>
                 <div class="profile-info text-center">
                     <h2 class="profile-name">{{ user.get('nickname', 'Usuario') }}</h2>
-                    <p class="profile-reviews">
-                        <i class="fas fa-star"></i> {{ reviews|length }} reseña{% if reviews|length != 1 %}s{% endif %}
-                    </p>
-                    <p class="profile-member-since">
-                        <i class="fas fa-calendar-alt"></i> Miembro desde: {{ user.get('created_at', 'N/A') }}
-                    </p>
+                      <p class="profile-reviews mb-1"><i class="fas fa-star"></i> {{ reviews|length }} reseña{% if reviews|length != 1 %}s{% endif %}</p>
+                      {% if user.get('created_at') %}
+                      <p class="profile-member-since"><i class="fas fa-calendar-alt"></i> Miembro desde: {{ user.get('created_at') }}</p>
+                      {% endif %}
                 </div>
             </div>
         </div>
+
         <div class="col-md-8">
             <div class="reviews-section glass-effect p-4 rounded">
-                <h3 class="section-title">
-                    <i class="fas fa-star"></i> Reseñas de {{ user.get('nickname', 'Usuario') }}
-                </h3>
+                <h3 class="section-title"><i class="fas fa-star"></i> Reseñas de {{ user.get('nickname', 'Usuario') }}</h3>
                 {% if reviews %}
-                    <div class="reviews-list">
+                    <div class="reviews-list row">
                         {% for review in reviews %}
-                            <div class="review-card animate__animated animate__fadeIn">
-                                <div class="review-header">
+                        <div class="col-12 mb-4">
+                            <div class="review-card animate__animated animate__fadeIn h-100">
+                                <div class="review-header d-flex justify-content-between align-items-start">
                                     <div class="d-flex align-items-center">
                                         <img loading="lazy" src="{{ review.movie_poster }}" alt="{{ review.movie_title }}" class="movie-poster mr-3">
-                                        <h4><a href="{{ url_for('movie_detail', movie_id=review.imdb_id) }}" class="movie-title-link">{{ review.movie_title }}</a></h4>
+                                        <h4 class="m-0"><a href="{{ url_for('movie_player', movie_id=review.imdb_id) }}" class="movie-title-link">{{ review.movie_title }}</a></h4>
                                     </div>
                                     <div class="rating">
-                                        {% for i in range(review.rating) %}
-                                            <i class="fas fa-star"></i>
-                                        {% endfor %}
-                                        {% for i in range(5 - review.rating) %}
-                                            <i class="far fa-star"></i>
-                                        {% endfor %}
+                                        {% for i in range(review.rating|int) %}<i class="fas fa-star"></i>{% endfor %}
+                                        {% for i in range(5 - review.rating|int) %}<i class="far fa-star"></i>{% endfor %}
                                     </div>
                                 </div>
                                 <p class="review-text">{{ review.review_text }}</p>
-                                <div class="review-footer">
-                                    <small class="review-date">
-                                        <i class="far fa-clock"></i> {{ review.created_at }}
-                                    </small>
-                                </div>
+                                <div class="review-footer"><small class="review-date"><i class="far fa-clock"></i> {{ review.created_at }}</small></div>
                             </div>
+                        </div>
                         {% endfor %}
                     </div>
                 {% else %}
-                    <div class="no-reviews">
+                    <div class="no-reviews text-center">
                         <i class="fas fa-film fa-3x"></i>
                         <p>{{ user.get('nickname', 'Usuario') }} aún no ha escrito reseñas</p>
                     </div>
@@ -69,115 +60,21 @@
 
 {% block extra_css %}
 <style>
-    body {
-        background-color: #1a1a1a;
-        color: #ffffff;
-    }
-
-    .glass-effect {
-        background: rgba(255, 0, 0, 0.1);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 0, 0, 0.2);
-        border-radius: 15px;
-    }
-
-    .profile-image {
-        width: 150px;
-        height: 150px;
-        object-fit: cover;
-        border-radius: 50%;
-        border: 3px solid #ff0000;
-        box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
-        margin-bottom: 20px;
-        transition: all 0.3s ease;
-    }
-
-    .profile-image:hover {
-        transform: scale(1.05);
-        box-shadow: 0 0 30px rgba(255, 0, 0, 0.8);
-    }
-
-    .profile-name {
-        color: #ff0000;
-        font-size: 2rem;
-        margin-bottom: 10px;
-        text-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
-    }
-
-    .profile-reviews, .profile-member-since {
-        color: #ffffff;
-        font-size: 1.1rem;
-        margin-bottom: 5px;
-    }
-
-    .section-title {
-        color: #ff0000;
-        border-bottom: 2px solid #ff0000;
-        padding-bottom: 10px;
-        margin-bottom: 20px;
-    }
-
-    .review-card {
-        background: rgba(255, 255, 255, 0.05);
-        border-radius: 10px;
-        padding: 20px;
-        margin-bottom: 20px;
-        transition: all 0.3s ease;
-        border: 1px solid rgba(255, 0, 0, 0.2);
-    }
-
-    .review-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 5px 15px rgba(255, 0, 0, 0.2);
-    }
-
-    .movie-poster {
-        width: 60px;
-        height: auto;
-        border-radius: 5px;
-        margin-right: 15px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-
-    .movie-title-link {
-        color: #ff0000;
-        text-decoration: none;
-        transition: all 0.3s ease;
-    }
-
-    .movie-title-link:hover {
-        color: #ff6666;
-        text-shadow: 0 0 5px #ff0000;
-    }
-
-    .rating {
-        color: #ffd700;
-        font-size: 1.2rem;
-        margin-top: 5px;
-    }
-
-    .review-text {
-        color: #ffffff;
-        font-size: 1rem;
-        line-height: 1.6;
-        margin: 10px 0;
-    }
-
-    .review-footer {
-        color: #999;
-        font-size: 0.9rem;
-    }
-
-    .no-reviews {
-        text-align: center;
-        padding: 40px 0;
-        color: #999;
-    }
-
-    .no-reviews i {
-        font-size: 3rem;
-        color: #ff0000;
-        margin-bottom: 20px;
-    }
+body{background-color:#1a1a1a;color:#fff}
+.glass-effect{background:rgba(255,0,0,.1);backdrop-filter:blur(10px);border:2px solid #f00;border-radius:15px}
+.profile-image{width:150px;height:150px;object-fit:cover;border-radius:50%;border:3px solid #f00;box-shadow:0 0 20px rgba(255,0,0,.2);margin-bottom:20px;transition:.3s}
+.profile-image:hover{transform:none}
+.profile-name{color:#fff;font-size:1.8rem;margin-bottom:8px}
+.profile-reviews,.profile-member-since{color:#fff;opacity:.9}
+.section-title{color:#fff;border-bottom:2px solid #f00;padding-bottom:10px;margin-bottom:20px}
+.review-card{background:rgba(255,0,0,.1);border:1px solid rgba(255,0,0,.2);border-radius:10px;padding:16px;transition:.3s}
+.review-card:hover{transform:none;box-shadow:0 5px 15px rgba(255,0,0,.2)}
+.movie-poster{width:60px;height:auto;border-radius:5px;margin-right:12px;box-shadow:0 2px 4px rgba(255,0,0,.1)}
+.movie-title-link{color:#fff;text-decoration:none}
+.movie-title-link:hover{color:#ff7777;text-decoration:underline}
+.rating{color:#ffd700}
+.review-text{margin:10px 0}
+.no-reviews{color:#bbb}
+@media(max-width:768px){.profile-card,.reviews-section{margin-bottom:20px}}
 </style>
 {% endblock %}

@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Editar Usuario - {{ user_edit.nickname or user_edit.get('nickname') }}{% endblock %}
+{% block content %}
+<div class="container animate__animated animate__fadeIn">
+  <h3 class="mb-3 text-light"><i class="fas fa-user-edit"></i> Editar Usuario</h3>
+  <form method="POST" class="glass-effect p-3 rounded">
+    <div class="mb-3">
+      <label class="form-label">Apodo</label>
+      <input type="text" class="form-control" name="nickname" value="{{ user_edit.nickname or user_edit.get('nickname') }}">
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Email</label>
+      <input type="email" class="form-control" name="email" value="{{ user_edit.email or user_edit.get('email') }}">
+    </div>
+  <button class="btn btn-danger led-effect" type="submit">Guardar</button>
+  <a class="btn btn-outline-light" href="{{ url_for('admin_dashboard') }}">Cancelar</a>
+  </form>
+</div>
+{% endblock %}

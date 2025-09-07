@@ -40,6 +40,10 @@
             display: flex;
             flex-direction: column;
         }
+        /* Reduce motion for users/devices that prefer it */
+        @media (prefers-reduced-motion: reduce) {
+            * { transition: none !important; animation: none !important; }
+        }
 
         /* Navbar Styles */
         .navbar {
@@ -71,10 +75,7 @@
             transition: text-shadow 0.3s ease;
         }
 
-        .navbar-brand:hover {
-            color: var(--accent-color);
-            text-shadow: 0 0 10px rgba(255, 0, 0, 1), 0 0 20px rgba(255, 0, 0, 1);
-        }
+    .navbar-brand:hover { color: var(--accent-color); text-shadow: 0 0 6px rgba(255,0,0,.8); }
 
         .navbar-nav .nav-link {
             color: var(--light-text);
@@ -86,11 +87,7 @@
             z-index: 1;
         }
 
-        .navbar-nav .nav-link:hover {
-            color: var(--accent-color);
-            text-shadow: 0 0 5px rgba(255, 0, 0, 1), 0 0 10px rgba(255, 0, 0, 1);
-            background-color: rgba(255, 0, 0, 0.1);
-        }
+    .navbar-nav .nav-link:hover { color: var(--accent-color); text-shadow: 0 0 4px rgba(255,0,0,.7); background-color: rgba(255,0,0,.08); }
 
         .navbar-toggler {
             border-color: var(--accent-color);
@@ -169,9 +166,16 @@
             transition: box-shadow 0.3s ease;
         }
 
-        .profile-img:hover {
-            box-shadow: 0 0 15px rgba(255, 0, 0, 1), 0 0 30px rgba(255, 0, 0, 0.5);
-        }
+    .profile-img:hover { box-shadow: 0 0 10px rgba(255,0,0,.6); transform: none; }
+
+    /* Tame hover transforms and heavy shadows across site to avoid jank */
+    .glass-effect { transition: box-shadow .15s ease, transform .15s ease; }
+    .glass-effect:hover { transform: none; box-shadow: 0 0 12px rgba(255,0,0,.35); }
+    .led-effect { transition: box-shadow .15s ease; }
+    .led-effect:hover { box-shadow: 0 0 14px #f00; }
+    .btn-danger:hover { transform: none; }
+    .review-card { transition: box-shadow .15s ease, transform .15s ease; }
+    .review-card:hover { transform: none; box-shadow: 0 2px 10px rgba(255,0,0,.25); }
 
         /* Responsive Adjustments */
         @media (max-width: 991px) {
@@ -241,6 +245,13 @@
                         </a>
                     </li>
                     {% if 'user_id' in session %}
+                        {% if is_admin_user(user) %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('admin_dashboard') }}">
+                                <i class="fas fa-tools"></i> Admin
+                            </a>
+                        </li>
+                        {% endif %}
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('profile') }}">
                                 <i class="fas fa-user"></i> Perfil
@@ -253,9 +264,9 @@
                         </li>
                         <li class="nav-item">
                             <div class="d-flex justify-content-center">
-                                <img loading="lazy" src="{{ user.profile_pic if (user.profile_pic and user.profile_pic.startswith('http')) else (url_for('static', filename=user.profile_pic) if user.profile_pic else url_for('static', filename='images/default_profile.png')) }}"
+                                <img loading="lazy" src="{{ profile_src(user.profile_pic) }}"
                                      alt="Foto de Perfil"
-                                     class="profile-img">
+                          class="profile-img" />
                             </div>
                         </li>
                     {% else %}

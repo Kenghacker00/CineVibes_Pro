@@ -1,0 +1,28 @@
+<div class="comment mb-3 p-2 border rounded" id="review-{{ review.id }}">
+  <div class="d-flex align-items-center justify-content-between">
+    <div class="d-flex align-items-center">
+      <img loading="lazy" src="{{ url_for('static', filename=review.user_profile_pic) if review.user_profile_pic else url_for('static', filename='images/default_profile.png') }}"
+           alt="Foto de Perfil"
+           class="profile-img" style="width: 40px; height: 40px; border-radius: 50%; margin-right: 10px;">
+      <a href="{{ url_for('user_profile', user_id=review.user_id) }}" class="user-profile-link">
+        <strong>{{ review.user_nickname }}</strong>
+      </a>
+      <span class="ml-2">({{ review.created_at }})</span>
+    </div>
+    {% if user and (user.id if user is mapping else user.get('id')) == review.user_id %}
+      <div>
+        <button class="btn btn-sm btn-outline-primary edit-review" data-review-id="{{ review.id }}">Editar</button>
+        <button class="btn btn-sm btn-outline-danger delete-review" data-review-id="{{ review.id }}">Eliminar</button>
+      </div>
+    {% endif %}
+  </div>
+  <p class="review-text mt-2">{{ review.review_text }}</p>
+  <p class="rating">Calificación:
+    {% for i in range(review.rating|int) %}
+      <i class="fas fa-star"></i>
+    {% endfor %}
+    {% for i in range(5 - (review.rating|int)) %}
+      <i class="far fa-star"></i>
+    {% endfor %}
+  </p>
+</div>

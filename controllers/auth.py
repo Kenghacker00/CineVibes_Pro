@@ -56,19 +56,37 @@ class AuthController:
             user = conn.execute('SELECT * FROM users WHERE id = ?', (user_id,)).fetchone()
             if user:
                 # user can be sqlite Row (dict-like) or dict (PG adapter)
-                raw_created = user['created_at'] if not isinstance(user, (tuple, list)) else None
-                formatted_date = None
-                if raw_created:
+                # Robustly format created_at regardless of backend or tz suffix
+                def _format_created(val):
+                    if not val:
+                        return ''
+                    # datetime/date objects
                     try:
-                        # intentos comunes de formato
+                        if hasattr(val, 'strftime'):
+                            return val.strftime('%d/%m/%Y')
+                    except Exception:
+                        pass
+                    # strings in various shapes
+                    try:
+                        s = str(val)
+                        # Try common precise formats first
                         for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M:%S.%f'):
                             try:
-                                formatted_date = datetime.strptime(raw_created, fmt).strftime('%d/%m/%Y')
-                                break
+                                return datetime.strptime(s, fmt).strftime('%d/%m/%Y')
                             except ValueError:
                                 continue
+                        # ISO-like: 2025-09-07T12:34:56[.123456][+00:00]
+                        # Extract YYYY-MM-DD and flip to DD/MM/YYYY
+                        import re
+                        m = re.search(r'(\d{4})-(\d{2})-(\d{2})', s)
+                        if m:
+                            return f"{m.group(3)}/{m.group(2)}/{m.group(1)}"
+                        return s
                     except Exception:
-                        formatted_date = None
+                        return ''
+
+                raw_created = user['created_at'] if not isinstance(user, (tuple, list)) else None
+                formatted_date = _format_created(raw_created)
 
                 if isinstance(user, (tuple, list)):
                     # Fallback in unlikely tuple case: map by index (assuming schema order)

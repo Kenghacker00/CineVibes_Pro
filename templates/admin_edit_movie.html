@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Editar Película - {{ movie.title }}{% endblock %}
+{% block content %}
+<div class="container animate__animated animate__fadeIn">
+  <h3 class="mb-3 text-light"><i class="fas fa-edit"></i> Editar Película</h3>
+  <form method="POST" class="glass-effect p-3 rounded">
+    <div class="row g-3">
+      <div class="col-md-6">
+        <label class="form-label">IMDb ID</label>
+        <input type="text" class="form-control" name="imdb_id" value="{{ movie.imdb_id or movie.get('imdb_id') }}">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Título</label>
+        <input type="text" class="form-control" name="title" value="{{ movie.title or movie.get('title') }}">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Año</label>
+        <input type="number" class="form-control" name="year" value="{{ movie.year or movie.get('year') }}">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Calificación IMDb</label>
+        <input type="text" class="form-control" name="imdb_rating" value="{{ movie.imdb_rating or movie.get('imdb_rating') }}">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Director</label>
+        <input type="text" class="form-control" name="director" value="{{ movie.director or movie.get('director') }}">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Actores</label>
+        <input type="text" class="form-control" name="actors" value="{{ movie.actors or movie.get('actors') }}">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Géneros</label>
+        <input type="text" class="form-control" name="genres" value="{{ movie.genres or movie.get('genres') }}">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Duración</label>
+        <input type="text" class="form-control" name="runtime" value="{{ movie.runtime or movie.get('runtime') }}">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Idioma</label>
+        <input type="text" class="form-control" name="language" value="{{ movie.language or movie.get('language') }}">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">País</label>
+        <input type="text" class="form-control" name="country" value="{{ movie.country or movie.get('country') }}">
+      </div>
+      <div class="col-12">
+        <label class="form-label">Premios</label>
+        <input type="text" class="form-control" name="awards" value="{{ movie.awards or movie.get('awards') }}">
+      </div>
+      <div class="col-12">
+        <label class="form-label">Poster (URL)</label>
+        <input type="url" class="form-control" name="poster" value="{{ movie.poster or movie.get('poster') }}">
+      </div>
+      <div class="col-12">
+        <label class="form-label">Enlace de video</label>
+        <input type="url" class="form-control" name="video_link" value="{{ movie.video_link or movie.get('video_link') }}">
+      </div>
+      <div class="col-12">
+        <label class="form-label">Fecha de estreno</label>
+        <input type="text" class="form-control" name="release_date" value="{{ movie.release_date or movie.get('release_date') }}">
+      </div>
+      <div class="col-12">
+        <label class="form-label">Sinopsis</label>
+        <textarea class="form-control" rows="4" name="plot">{{ movie.plot or movie.get('plot') }}</textarea>
+      </div>
+      <div class="col-12 form-check">
+        <input class="form-check-input" type="checkbox" name="available" id="available" {% if (movie.available if movie is mapping else movie.get('available')) %}checked{% endif %}>
+        <label class="form-check-label" for="available">Disponible</label>
+      </div>
+      <div class="col-12">
+  <button class="btn btn-danger led-effect" type="submit">Guardar</button>
+  <a class="btn btn-outline-light" href="{{ url_for('admin_dashboard') }}">Cancelar</a>
+      </div>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -55,10 +55,8 @@ body {
     transition: transform 0.3s, box-shadow 0.3s;
 }
 
-.glass-effect:hover {
-    transform: scale(1.02);
-    box-shadow: 0 4px 20px rgba(255, 0, 0, 0.5);
-}
+/* Reduce motion, avoid exaggerated scaling */
+.glass-effect:hover { transform: none; box-shadow: 0 0 12px rgba(255, 0, 0, 0.25); }
 
 .btn-danger {
     background-color: #ff0000;
@@ -66,19 +64,14 @@ body {
     transition: all 0.3s ease;
 }
 
-.btn-danger:hover {
-    background-color: #cc0000;
-    transform: scale(1.05);
-}
+.btn-danger:hover { background-color: #cc0000; transform: none; box-shadow: 0 0 10px rgba(255,0,0,.4); }
 
 .led-effect {
     box-shadow: 0 0 10px #ff0000;
     transition: all 0.3s ease;
 }
 
-.led-effect:hover {
-    box-shadow: 0 0 20px #ff0000, 0 0 40px #ff0000;
-}
+.led-effect:hover { box-shadow: 0 0 16px #ff0000; }
 
 .form-label {
     font-weight: bold;

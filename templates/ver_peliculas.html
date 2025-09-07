@@ -12,18 +12,18 @@
         {% endif %}
     </header>
 
-    <section class="featured-movies mb-5">
+        <section class="featured-movies mb-5">
         <h2 class="section-title text-center mb-4"><i class="fas fa-film"></i> Películas Disponibles</h2>
-        <div class="row">
+                <div class="row" id="available-list">
             {% if movies %}
                 {% for movie in movies %}
-                    <div class="col-md-6 mb-4">
+                                        <div class="col-12 col-md-6 mb-4">
                         <div class="movie-card glass-effect animate__animated animate__fadeIn">
                             <div class="row no-gutters">
-                                <div class="col-md-4">
+                                                                <div class="col-4 col-md-4">
                                     <img loading="lazy" src="{{ movie.poster }}" alt="{{ movie.title }} Poster" class="movie-poster">
                                 </div>
-                                <div class="col-md-8">
+                                                                <div class="col-8 col-md-8">
                                     <div class="movie-info p-4 bg-dark text-white rounded">
                                         <h3 class="movie-title" style="color: #ff4081;">{{ movie.title }}</h3>
                                         <div class="movie-meta">
@@ -46,25 +46,125 @@
                 <p>No hay películas disponibles en este momento.</p>
             {% endif %}
         </div>
+                        <div class="d-flex justify-content-center gap-2 mt-3" id="available-pagination" style="display:none"></div>
+                        <div id="scroll-sentinel" class="my-3" aria-hidden="true"></div>
+                        <div class="d-grid d-md-none mt-2">
+                            <button id="load-more" class="btn btn-danger led-effect" type="button" aria-label="Cargar más películas" style="display:none">Cargar más</button>
+                        </div>
     </section>
 </div>
 
-<!-- JavaScript para efectos -->
+<!-- JavaScript para efectos y paginación móvil/desktop -->
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const movieCards = document.querySelectorAll('.movie-card');
+        document.addEventListener('DOMContentLoaded', function() {
+            const list = document.getElementById('available-list');
+            const pager = document.getElementById('available-pagination');
+            const sentinel = document.getElementById('scroll-sentinel');
+            const btnMore = document.getElementById('load-more');
+            const PER_PAGE = 6;
+            let currentPage = 0;
+            let totalPages = 1;
+            let isLoading = false;
 
-        movieCards.forEach(card => {
-            card.addEventListener('mouseenter', () => {
-                card.classList.add('shadow-lg');
-                card.style.transform = 'scale(1.05)';
-            });
+                function cardTemplate(m){
+                        return `
+                        <div class="col-12 col-md-6 mb-4">
+                            <div class="movie-card glass-effect animate__animated animate__fadeIn">
+                                <div class="row no-gutters align-items-stretch">
+                                    <div class="col-4 col-md-4">
+                                        <img loading="lazy" src="${m.poster||''}" alt="${m.title||''} Poster" class="movie-poster" style="width:100%;height:auto;object-fit:cover;">
+                                    </div>
+                                    <div class="col-8 col-md-8">
+                                        <div class="movie-info p-3 p-md-4 bg-dark text-white rounded h-100 d-flex flex-column">
+                                            <h3 class="movie-title" style="color:#ff4081; font-size: clamp(1rem,2.5vw,1.25rem);">${m.title||''}</h3>
+                                            <div class="movie-meta mb-1">
+                                                <span><i class="fas fa-calendar"></i> ${m.year||''}</span>
+                                                <span class="ms-2"><i class="fas fa-film"></i> ${m.director||''}</span>
+                                            </div>
+                                            <div class="movie-description flex-grow-1" style="font-size: clamp(.85rem,2.2vw,1rem);">${m.plot||''}</div>
+                                            <a href="/movie/player/${m.imdb_id}" class="btn btn-danger btn-watch mt-2 align-self-start">
+                                                <i class="fas fa-play"></i> Ver Película
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>`;
+                }
 
-            card.addEventListener('mouseleave', () => {
-                card.classList.remove('shadow-lg');
-                card.style.transform = 'scale(1)';
-            });
+                function render(items, append=false){
+                    if(!list) return;
+                    const html = (items||[]).map(cardTemplate).join('');
+                    if (append) list.insertAdjacentHTML('beforeend', html);
+                    else list.innerHTML = html;
+                }
+
+                function renderPager(page, pages, onClick){
+                        if (!pager) return;
+                        pager.innerHTML = '';
+                        const mkBtn = (label, target, variant='danger', disabled=false, active=false)=>{
+                                const a = document.createElement('a');
+                                a.href = '#';
+                                a.className = `btn btn-${active?'secondary':'danger'} ${variant==='danger'?'led-effect':''} ${active?'active':''}`.trim();
+                                a.textContent = label;
+                                if (!disabled) a.addEventListener('click', (e)=>{ e.preventDefault(); onClick(target); });
+                                pager.appendChild(a);
+                        }
+                        if (pages <= 1) return;
+                        mkBtn('Anterior', Math.max(1, page-1));
+                        for (let p=1; p<=pages; p++) mkBtn(String(p), p, 'secondary', false, p===page);
+                        mkBtn('Siguiente', Math.min(pages, page+1));
+                }
+
+                async function loadPage(page){
+                    if (isLoading) return; isLoading = true;
+                    try {
+                        const r = await fetch(`/api/available-movies?page=${page||1}&per_page=${PER_PAGE}`, { headers: { 'Accept':'application/json' } });
+                        if (!r.ok) return;
+                        const data = await r.json();
+                        const append = page > 1;
+                        render(data.items||[], append);
+                        const total = Number(data.total||0); const perPage = Number(data.per_page||PER_PAGE);
+                        totalPages = Math.max(Math.ceil(total/perPage), 1);
+                        currentPage = Number(data.page||page||1);
+                        if (btnMore) btnMore.style.display = (currentPage < totalPages ? 'block' : 'none');
+                    } finally {
+                        isLoading = false;
+                    }
+                }
+
+                // Infinite scroll via IntersectionObserver with mobile fallback
+                function setupInfiniteScroll(){
+                    if (!('IntersectionObserver' in window) || !sentinel) {
+                        if (btnMore) btnMore.style.display = 'block';
+                        return;
+                    }
+                    const io = new IntersectionObserver((entries)=>{
+                        const entry = entries[0];
+                        if (entry.isIntersecting && !isLoading && currentPage < totalPages) {
+                            loadPage(currentPage + 1);
+                        }
+                    }, { root: null, rootMargin: '200px', threshold: 0 });
+                    io.observe(sentinel);
+                }
+
+                if (btnMore) {
+                    btnMore.addEventListener('click', ()=>{
+                        if (!isLoading && currentPage < totalPages) loadPage(currentPage + 1);
+                    });
+                }
+
+                // Initial load via API, then init infinite scroll
+                loadPage(1).then(setupInfiniteScroll);
         });
-    });
 </script>
+
+{% block extra_css %}
+<style>
+@media (max-width: 576px){
+    .movie-description{ display: -webkit-box; -webkit-line-clamp: 4; line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+    .btn.btn-danger.btn-watch{ width: 100%; text-align:center; }
+}
+</style>
+{% endblock %}
 {% endblock %}
