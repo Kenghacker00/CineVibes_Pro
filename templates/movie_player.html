@@ -70,17 +70,19 @@
 
         <div class="comments-list mt-4">
             {% for review in reviews %}
-                <div class="comment mb-3 p-2 border rounded" id="review-{{ review.id }}">
+                <div class="comment mb-4 p-2 border rounded" id="review-{{ review.id }}">
                     <div class="d-flex align-items-center justify-content-between">
-                        <div class="d-flex align-items-center">
-                            <img loading="lazy" src="{{ url_for('static', filename=review.user_profile_pic) if review.user_profile_pic else url_for('static', filename='images/default_profile.png') }}"
-                                 alt="Foto de Perfil"
-                                 class="profile-img" style="width: 40px; height: 40px; border-radius: 50%; margin-right: 10px;">
-                            <a href="{{ url_for('user_profile', user_id=review.user_id) }}" class="user-profile-link">
-                                <strong>{{ review.user_nickname }}</strong>
-                            </a>
-                            <span class="ml-2">({{ review.created_at }})</span>
-                        </div>
+                                                                        <div class="d-flex align-items-center comment-head">
+                                                        <img loading="lazy" src="{{ profile_src(review.user_profile_pic) }}"
+                                                                 alt="Foto de Perfil"
+                                                                                         class="profile-img mr-2">
+                                                                                <div class="d-flex flex-column flex-sm-row align-items-sm-center comment-meta">
+                                                                                    <a href="{{ url_for('user_profile', user_id=review.user_id) }}" class="user-profile-link mr-sm-2">
+                                                                    <strong class="comment-username">{{ review.user_nickname }}</strong>
+                                                            </a>
+                                                                                    <small class="comment-date">{{ review.created_at | fmt_dt }}</small>
+                                                        </div>
+                                                </div>
                         {% if user and user.id == review.user_id %}
                             <div>
                                 <button class="btn btn-sm btn-outline-primary edit-review" data-review-id="{{ review.id }}">Editar</button>
@@ -203,6 +205,13 @@
         color: #ffd700;
     }
 
+    /* Avatar and text wrapping */
+    .profile-img{width:40px;height:40px;border-radius:50%;object-fit:cover;border:2px solid #ff0000;margin-right:22px}
+    .comment-username{color:#ffffff;word-break:break-word}
+    .review-text{white-space:pre-wrap;word-wrap:break-word;overflow-wrap:anywhere}
+    .comment-date{color:#ffffff;opacity:.9}
+    .comment-meta{gap:.8rem}
+
     @media (max-width: 768px) {
         .embed-responsive {
             height: 300px;
@@ -212,6 +221,9 @@
             width: 100%;
             margin-bottom: 10px;
         }
+    .comment-head{align-items:flex-start}
+    .comment-meta{gap:.8rem}
+    .comment-date{margin-top:2px;display:block}
     }
 </style>
 {% endblock %}

@@ -140,6 +140,10 @@ body { background-color:#1a1a1a; color:#fff; }
 .movie-poster { width:50px; height:75px; object-fit:cover; border-radius:5px; margin-right:10px; box-shadow:0 2px 4px rgba(255,0,0,.1); }
 .rating { color:#ffd700; }
 .no-reviews { text-align:center; padding:40px 0; color:#fff; opacity:.7; }
+/* Wrap long text and usernames */
+.profile-name,.profile-email,.profile-member-since{word-break:break-word}
+.review-text{white-space:pre-wrap;word-wrap:break-word;overflow-wrap:anywhere}
+.profile-image{object-fit:cover}
 @media (max-width:768px){
   .container{ padding:10px; }
   .profile-card,.reviews-section{ margin-bottom:20px; }

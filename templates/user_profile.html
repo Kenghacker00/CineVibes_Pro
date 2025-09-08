@@ -75,6 +75,10 @@ body{background-color:#1a1a1a;color:#fff}
 .rating{color:#ffd700}
 .review-text{margin:10px 0}
 .no-reviews{color:#bbb}
+/* Prevent overflow */
+.profile-name{word-break:break-word}
+.review-text{white-space:pre-wrap;word-wrap:break-word;overflow-wrap:anywhere}
+.profile-image{object-fit:cover}
 @media(max-width:768px){.profile-card,.reviews-section{margin-bottom:20px}}
 </style>
 {% endblock %}

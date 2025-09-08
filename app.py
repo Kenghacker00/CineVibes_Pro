@@ -106,6 +106,41 @@ def admin_flag_helper():
 
     return dict(is_admin_user=is_admin_user, ADMIN_EMAIL=ADMIN_EMAIL)
 
+# Pretty datetime formatting filter for comments/timestamps
+@app.template_filter('fmt_dt')
+def fmt_dt(value: object) -> str:
+    """Format various datetime strings/objects to 'dd/mm/YYYY HH:MM'."""
+    from datetime import datetime as _dt
+    if not value:
+        return ''
+    try:
+        # Datetime-like object
+        if hasattr(value, 'strftime'):
+            return value.strftime('%d/%m/%Y %H:%M')
+    except Exception:
+        pass
+    s = str(value)
+    # Try direct ISO parsing (Python 3.11+ tolerates offset with fromisoformat)
+    try:
+        dt = _dt.fromisoformat(s.replace('Z', '+00:00'))
+        return dt.strftime('%d/%m/%Y %H:%M')
+    except Exception:
+        pass
+    # Try common SQL formats
+    for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M:%S.%f'):
+        try:
+            dt = _dt.strptime(s, fmt)
+            return dt.strftime('%d/%m/%Y %H:%M')
+        except Exception:
+            continue
+    # Fallback: extract date and time with regex, ignore seconds/tz
+    import re
+    m = re.search(r'(\d{4})-(\d{2})-(\d{2}).*?(\d{2}):(\d{2})', s)
+    if m:
+        return f"{m.group(3)}/{m.group(2)}/{m.group(1)} {m.group(4)}:{m.group(5)}"
+    # Last resort: return original
+    return s
+
 # -------------------------
 # Controllers
 # -------------------------
